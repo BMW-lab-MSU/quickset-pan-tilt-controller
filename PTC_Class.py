@@ -1,0 +1,44 @@
+import serial
+import time
+
+class PTC_Controller:
+    
+    def __init__(self, name: str = "Pan Tilt Controller Object", Identity: str = bytes.fromhex('00')) -> None :
+        self.name: str = name
+        self.identity: str = Identity
+        com_port = 'COM6' # change to your COM port number
+        self.serial = serial.Serial(com_port, baudrate=9600, timeout=1)  
+        self.STX = bytes.fromhex('02') #start of text character
+        self.ETX = bytes.fromhex('03') #end of text character
+        print(f"{self.name} initialized")
+    
+    def calculate_lrc(data):
+        lrc = 0b00000000  # Initialize LRC value to zero
+        for byte in data:
+            print("BYTE: ", bin(byte)[2:].zfill(8))  # Print binary representation of each byte
+            lrc ^= byte
+        print("DATA: ", data)
+        print("LRC: ", bin(lrc)[2:].zfill(8))  # Print binary representation of the final LRC value
+        return bytes([lrc])  # Return LRC value as a byte
+    
+    def send_data(self, command, data=None):
+
+        self.serial.write(self.STX)
+        self.serial.write(self.identity) 
+
+        if data is not None:
+            command = bytes.fromhex(command)
+            data = bytes.fromhex(data)
+            self.serial.write(command)
+            self.serial.write(data)
+            self.serial.write(self.calculate_lrc(command + data))
+        else:
+            command = bytes.fromhex(command)
+            self.serial.write(command)
+            self.serial.write(self.calculate_lrc(command))
+
+        self.serial.write(self.ETX)
+        time.sleep(0.005)
+    
+    def read(self, ammount):
+        self.data = self.serial.read(ammount)
