@@ -22,17 +22,29 @@ class PTC_Controller:
         return bytes([lrc])  # Return LRC value as a byte
     
     def fault_reset(self):
-        self.serial.write(self.STX)                 # Send Start
-        self.serial.write(self.identity)            # Send ID
+        self.serial.write(self.STX)             # Send Start
+        self.serial.write(self.identity)        # Send ID
         self.serial.write(bytes.fromhex('31'))  # Send Command
-        self.serial.write(bytes.fromhex('01'))   # Send Sub-Command
-        self.serial.write(bytes.fromhex('00'))   # Send Sub-Command
-        self.serial.write(bytes.fromhex('00'))   # Send Sub-Command
-        self.serial.write(bytes.fromhex('00'))   # Send Sub-Command
-        self.serial.write(bytes.fromhex('00'))   # Send Sub-Command
+        self.serial.write(bytes.fromhex('01'))  # Send Sub-Command
+        self.serial.write(bytes.fromhex('00'))  # Send Sub-Command
+        self.serial.write(bytes.fromhex('00'))  # Send Sub-Command
+        self.serial.write(bytes.fromhex('00'))  # Send Sub-Command
+        self.serial.write(bytes.fromhex('00'))  # Send Sub-Command
         self.serial.write(bytes.fromhex('30'))  # Send End Command
-        self.serial.write(self.ETX)                 # Send End Character
+        self.serial.write(self.ETX)             # Send End Character
     
+    def move_to(self, Pan: int=0, Tilt: int=0):
+        self.serial.write(self.STX)             # Send Start
+        self.serial.write(self.identity)        # Send ID
+        self.serial.write(bytes.fromhex('33'))  # Send Command
+        FluffPan = hex(Pan)[2:].zfill(4)
+        FluffTilt = hex(Tilt)[2:].zfill(4)
+        self.serial.write(bytes.fromhex(FluffPan[2:]))   # Send Sub-Command
+        self.serial.write(bytes.fromhex(FluffPan[0:2]))   # Send Sub-Command
+        self.serial.write(bytes.fromhex(FluffTilt[2:]))   # Send Sub-Command
+        self.serial.write(bytes.fromhex(FluffTilt[0:2]))   # Send Sub-Command
+        self.serial.write(bytes.fromhex('33'))  # Send End Command
+        self.serial.write(self.ETX)             # Send End Character
     
     def send_data(self, command, data):
 
