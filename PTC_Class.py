@@ -21,10 +21,23 @@ class PTC_Controller:
         print("LRC: ", bin(lrc)[2:].zfill(8))  # Print binary representation of the final LRC value
         return bytes([lrc])  # Return LRC value as a byte
     
-    def send_data(self, command, data=None):
+    def fault_reset(self):
+        self.serial.write(self.STX)                 # Send Start
+        self.serial.write(self.identity)            # Send ID
+        self.serial.write(bytes.fromhex('31'))  # Send Command
+        self.serial.write(bytes.fromhex('01'))   # Send Sub-Command
+        self.serial.write(bytes.fromhex('00'))   # Send Sub-Command
+        self.serial.write(bytes.fromhex('00'))   # Send Sub-Command
+        self.serial.write(bytes.fromhex('00'))   # Send Sub-Command
+        self.serial.write(bytes.fromhex('00'))   # Send Sub-Command
+        self.serial.write(bytes.fromhex('30'))  # Send End Command
+        self.serial.write(self.ETX)                 # Send End Character
+    
+    
+    def send_data(self, command, data):
 
-        self.serial.write(self.STX)
-        self.serial.write(self.identity) 
+        self.serial.write(self.STX)      # Send Start
+        self.serial.write(self.identity) # Send ID
 
         if data is not None:
             command = bytes.fromhex(command)

@@ -3,9 +3,10 @@ import time
 
 c = PTC_Controller()
 while True:
-    c.send_data('31', None)
-    time.sleep(0.5)
+    c.fault_reset()
+    #send_data('31', None)
+    time.sleep(1)
     #read data sent back and print
-    c.read(2)
+    #c.read(2)
 
 
