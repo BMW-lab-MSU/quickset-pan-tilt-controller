@@ -33,11 +33,11 @@ def send_data(ser, command, data=None):
     ser.write(ETX)
     time.sleep(0.005)
 
-com_port = 'COM13' # change to your COM port number
+com_port = 'COM6' # change to your COM port number
 ser = serial.Serial(com_port, baudrate=9600, timeout=1)
 
 while True:
-    send_data(ser, '9A', None)
+    send_data(ser, '33', None)
     time.sleep(0.5)
     #read data sent back and print
     data = ser.read(2)
