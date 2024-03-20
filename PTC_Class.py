@@ -6,19 +6,30 @@ class PTC_Controller:
     def __init__(self, name: str = "Pan Tilt Controller Object", Identity: str = bytes.fromhex('00')) -> None :
         self.name: str = name
         self.identity: str = Identity
-        com_port = 'COM6' # change to your COM port number
+        com_port = 'COM8' # change to your COM port number
         self.serial = serial.Serial(com_port, baudrate=9600, timeout=1)  
         self.STX = bytes.fromhex('02') #start of text character
         self.ETX = bytes.fromhex('03') #end of text character
         print(f"{self.name} initialized")
     
-    def calculate_lrc(data):
+    def calculate_lrc(self, data):
         lrc = 0b00000000  # Initialize LRC value to zero
         for byte in data:
-            print("BYTE: ", bin(byte)[2:].zfill(8))  # Print binary representation of each byte
+            print(f"BYTE: {bin(byte)[2:].zfill(8)} for byte: {byte}")  # Print binary representation of each byte
             lrc ^= byte
         print("DATA: ", data)
         print("LRC: ", bin(lrc)[2:].zfill(8))  # Print binary representation of the final LRC value
+        return bytes([lrc])  # Return LRC value as a byte
+    
+    def calculate_lrc_hex(self, data):
+        lrc = bytes.fromhex('00')  # Initialize LRC value to zero
+        print(f"DATA: {data}")
+        bytedata = [int(d) for d in data]
+        print(f"INT DATA: {bytedata}")
+        for byte in bytedata:
+            print(f"BYTE: {(byte)[2:].zfill(8)} for byte: {byte}")  # Print binary representation of each byte
+            lrc ^= byte
+        print(f"LRC: {bin(lrc)[2:].zfill(8)}")  # Print binary representation of the final LRC value
         return bytes([lrc])  # Return LRC value as a byte
     
     def fault_reset(self):
@@ -67,3 +78,10 @@ class PTC_Controller:
     
     def read(self, ammount):
         self.data = self.serial.read(ammount)
+
+
+
+# c = PTC_Controller()
+# print(f"{bytes.fromhex('31')}")
+# print(f"{bytes.fromhex('0x31'[2:])}")
+# print(f"LRC?: {c.calculate_lrc_hex(['31','01','00','00','00','00'])}")
