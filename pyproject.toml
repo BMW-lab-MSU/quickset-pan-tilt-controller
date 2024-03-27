@@ -1,0 +1,22 @@
+[project]
+name = "pan_tilt_controller"
+version = "0.0.1"
+authors = [
+    {name="Wyatt Weller"},
+    {name="Trevor Vannoy"},
+]
+description = "Package for controlling Quickset pan-tilt mounts"
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/BMW-lab-MSU/pan-tilt-controller"
+Issues = "https://github.com/BMW-lab-MSU/pan-tilt-controller/issues"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
