@@ -1,13 +1,16 @@
 import serial
 import time
+from abc import ABC
 
 
-class PanTiltController:
-    def __init__(self, ID):
+class QuicksetController(ABC):
+    def __init__(self, ID, protocol, serial_port, baud_rate=9600):
         self.id: str = ID
         self.fw_version = None
         self.soft_limits = []
         self.CMD_LIST = set()
+
+        self.serial = serial.Serial(port=serial_port, baudrate=baud_rate)
 
     def home(self):
         self.send(33, 0, 0)
