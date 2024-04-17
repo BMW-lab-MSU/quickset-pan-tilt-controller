@@ -1,5 +1,5 @@
 [project]
-name = "pan_tilt_controller"
+name = "quickset_pan_tilt"
 version = "0.0.1"
 authors = [
     {name="Wyatt Weller"},
