@@ -14,7 +14,7 @@ class QuicksetProtocol(ABC):
                                       ESC=0x1b)
 
     @staticmethod
-    def int_to_bytes(integer):
+    def int_to_bytes(integer: int) -> bytearray:
         """Convert an integer into little-endian bytes.
 
         The Quickset pan-tilt mount protocols format integers as 16-bit
@@ -34,7 +34,7 @@ class QuicksetProtocol(ABC):
         return bytearray(int_bytes)
 
     @staticmethod
-    def compute_lrc(byte_array):
+    def compute_lrc(byte_array: bytes) -> bytearray:
         """Calculate the xor-based longitudinal redundancy check.
 
         Args:
@@ -57,7 +57,7 @@ class QuicksetProtocol(ABC):
         return bytearray((lrc).to_bytes(length=1, signed=False))
 
     @staticmethod
-    def escape_control_chars(packet):
+    def escape_control_chars(packet: bytearray) -> bytearray:
         """Escape bytes that match a control character.
 
         When a byte matches a control character, it must be escaped by
@@ -87,7 +87,7 @@ class QuicksetProtocol(ABC):
         return new_packet
 
     @staticmethod
-    def insert_escape_sequence(byte: int):
+    def insert_escape_sequence(byte: int) -> bytearray:
         """Insert an escape sequence.
 
         Args:
@@ -128,7 +128,7 @@ class QuicksetProtocol(ABC):
         self.COMMAND_NAMES = set(self._COMMANDS.keys())
 
     @abstractmethod
-    def assemble_packet(self, cmd_name, *data):
+    def assemble_packet(self, cmd_name: str, *data) -> bytearray:
         """Assemble the communication packet for a command.
 
         Some commands require input data, such as the pan and tilt coordinates.
@@ -147,7 +147,7 @@ class QuicksetProtocol(ABC):
         """
         pass
 
-    def _prepare_cmd_and_lrc_packets(self, cmd_name, *data):
+    def _prepare_cmd_and_lrc_packets(self, cmd_name: str, *data) -> bytearray:
         """Create the command, data, and lrc bytes for the communication packet.
 
         This method dispatches preparing the data for the command to a
@@ -198,7 +198,7 @@ class QuicksetProtocol(ABC):
     def _get_status(self):
         pass
 
-    def _fault_reset(self):
+    def _fault_reset(self) -> bytearray:
         """Clear any hard faults.
 
         Possible hard faults are timeout, direction error, and current overload.
@@ -219,7 +219,7 @@ class QuicksetProtocol(ABC):
 
         return data_bytes
 
-    def _get_comm_timeout(self):
+    def _get_comm_timeout(self) -> bytearray:
         """Get the current value of the communication timeout.
 
         Returns:
@@ -233,16 +233,17 @@ class QuicksetProtocol(ABC):
         # operations like extend and insert.
         return bytearray(byte)
 
-    def _set_comm_timeout(self, timeout):
+    def _set_comm_timeout(self, timeout: int) -> bytearray:
         """Set the communication timeout.
 
         Args:
             timeout:
-                The timeout value to set. Must be between 0 and 120 seconds.
-                A value of 0 disables the communication timeout.
+                The timeout value to set. Must be an integer between 0 and 120
+                seconds. A value of 0 disables the communication timeout.
 
         Returns:
-            byte: The timeout command byte to send to the pan-tilt controller.
+            byte:
+                The timeout command byte to send to the pan-tilt controller.
         """
         if timeout > 120 or timeout < 0:
             warnings.warn("Timeout value must be between 0 and 120 seconds."
@@ -253,7 +254,9 @@ class QuicksetProtocol(ABC):
         # operations like extend and insert.
         return bytearray(timeout.to_bytes())
 
-    def _move_to_entered(self, pan=None, tilt=None):
+    def _move_to_entered(self,
+                         pan: float | None = None,
+                         tilt: float | None = None) -> bytearray:
         """Move to entered coordinate.
 
         Args:
@@ -292,7 +295,9 @@ class QuicksetProtocol(ABC):
 
         return data_bytes
 
-    def _move_to_delta(self, pan=None, tilt=None):
+    def _move_to_delta(self,
+                       pan: float | None = None,
+                       tilt: float | None = None) -> bytearray:
         """Move to delta coordinates.
 
         Move specified pan and tilt angles away from the current coordinate.
