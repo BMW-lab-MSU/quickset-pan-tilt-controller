@@ -106,6 +106,7 @@ class QuicksetProtocol(ABC):
             # need a method to prepare the data, hence why we use an anonymous
             # function that doesn't nothing.
             'home' : {'func' : lambda: None, 'number' : 0x35},
+            'fault_reset': {'func': self._fault_reset, 'number': 0x31},
         }
 
         self.COMMAND_NAMES = set(self._COMMANDS.keys())
@@ -177,6 +178,26 @@ class QuicksetProtocol(ABC):
     @abstractmethod
     def _get_status(self):
         pass
+
+    def _fault_reset(self):
+        """Clear any hard faults.
+
+        Possible hard faults are timeout, direction error, and current overload.
+        """
+        # Set the reset bit high
+        reset_cmd = (0b00000001).to_bytes()
+
+        # Set all jog speeds to 0
+        pan_jog_cmd = (0).to_bytes()
+        tilt_jog_cmd = (0).to_bytes()
+        zoom_jog_cmd = (0).to_bytes()
+        focus_jog_cmd = (0).to_bytes()
+
+        data_bytes = (reset_cmd + pan_jog_cmd + tilt_jog_cmd + zoom_jog_cmd
+            + focus_jog_cmd)
+
+        return data_bytes
+
 
     def _move_to_entered(self, pan=None, tilt=None):
         """Move to entered coordinate.
