@@ -174,7 +174,9 @@ class QuicksetProtocol(ABC):
             raise NotImplementedError(
                 f'Command "{cmd_name}" is not implemented.')
 
-        cmd_bytes = self._COMMANDS[cmd_name]['number'].to_bytes()
+        # cmd_bytes needs to be a bytearray so we can support mutable sequence
+        # operations like extend and insert.
+        cmd_bytes = bytearray(self._COMMANDS[cmd_name]['number'].to_bytes())
 
         # Call the command-specific function to prepare the data bytes.
         data_bytes = self._COMMANDS[cmd_name]['func'](*data)
@@ -210,8 +212,10 @@ class QuicksetProtocol(ABC):
         zoom_jog_cmd = (0).to_bytes()
         focus_jog_cmd = (0).to_bytes()
 
-        data_bytes = (reset_cmd + pan_jog_cmd + tilt_jog_cmd + zoom_jog_cmd
-                      + focus_jog_cmd)
+        # Return a bytearray because we need to support mutable sequence
+        # operations like extend and insert.
+        data_bytes = bytearray(reset_cmd + pan_jog_cmd + tilt_jog_cmd
+                               + zoom_jog_cmd + focus_jog_cmd)
 
         return data_bytes
 
@@ -224,7 +228,10 @@ class QuicksetProtocol(ABC):
         # Set the query bit (bit 7) to 1.
         # NOTE: Bit indexing starts at 0 in the QuickSet documentation.
         byte = (0b1000_0000).to_bytes()
-        return byte
+
+        # Return a bytearray because we need to support mutable sequence
+        # operations like extend and insert.
+        return bytearray(byte)
 
     def _set_comm_timeout(self, timeout):
         """Set the communication timeout.
@@ -240,11 +247,11 @@ class QuicksetProtocol(ABC):
         if timeout > 120 or timeout < 0:
             warnings.warn("Timeout value must be between 0 and 120 seconds."
                           + " Timeout will not be set.")
-            byte = None
-        else:
-            byte = timeout.to_bytes()
+            return None
 
-        return byte
+        # Return a bytearray because we need to support mutable sequence
+        # operations like extend and insert.
+        return bytearray(timeout.to_bytes())
 
     def _move_to_entered(self, pan=None, tilt=None):
         """Move to entered coordinate.
