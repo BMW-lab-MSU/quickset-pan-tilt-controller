@@ -38,7 +38,7 @@ class QuicksetProtocol(ABC):
         """Calculate the xor-based longitudinal redundancy check.
 
         Args:
-            byte_array: 
+            byte_array:
                 Array of bytes to compute the LRC on. This should start with
                 the command byte and end with the last data byte.
 
@@ -67,7 +67,7 @@ class QuicksetProtocol(ABC):
 
         Args:
             packet:
-                The packet of bytes to check for control characters in. 
+                The packet of bytes to check for control characters in.
 
         Returns:
             new_packet:
@@ -92,10 +92,10 @@ class QuicksetProtocol(ABC):
 
         Args:
             byte:
-                The byte to escape. 
+                The byte to escape.
 
         Returns:
-            escape_sequence: 
+            escape_sequence:
                 An array of bytes containing the escape byte followed by the
                 modified original byte.
         """
@@ -137,7 +137,7 @@ class QuicksetProtocol(ABC):
         Args:
             cmd_name:
                 The name of the desired command. This command name must match a
-                command name defined in COMMAND_NAMES. 
+                command name defined in COMMAND_NAMES.
             *data:
                 Additional positional arguments for the desired command.
 
@@ -153,7 +153,7 @@ class QuicksetProtocol(ABC):
         This method dispatches preparing the data for the command to a
         command-specific data-preparation method. The required data depends on
         the specific command, thus any number of additional positional
-        arguments can be passed in after the `cmd_name`. 
+        arguments can be passed in after the `cmd_name`.
 
         All other packet preparation is common to all commands, and thus
         doesn't need to be dispatched.
@@ -161,12 +161,12 @@ class QuicksetProtocol(ABC):
         Args:
             cmd_name:
                 The name of the desired command. This command name must match a
-                command name defined in COMMAND_NAMES. 
+                command name defined in COMMAND_NAMES.
             *data:
                 Additional positional arguments for the desired command.
 
         Returns:
-            packet: 
+            packet:
                 The command, data bytes, and LRC for the desired command.
         """
 
@@ -202,7 +202,7 @@ class QuicksetProtocol(ABC):
         Possible hard faults are timeout, direction error, and current overload.
         """
         # Set the reset bit high
-        reset_cmd = (0b00000001).to_bytes()
+        reset_cmd = (0b0000_0001).to_bytes()
 
         # Set all jog speeds to 0
         pan_jog_cmd = (0).to_bytes()
@@ -250,7 +250,7 @@ class QuicksetProtocol(ABC):
         """Move to entered coordinate.
 
         Args:
-            pan: 
+            pan:
                 Pan coordinate in degrees, between -360.0 and 360.0.
                 Coordinate precision is 0.1 degrees. Passing 999.9 or None will
                 keep the pan position stationary.
@@ -261,7 +261,7 @@ class QuicksetProtocol(ABC):
                 keep the tilt coordinate stationary.
 
         Returns:
-            data_bytes: 
+            data_bytes:
                 Bytes representing the pan and tilt coordinates. The first two
                 bytes are the little-endian representation of the pan
                 coordinate, and the last two bytes are little-endian
@@ -291,7 +291,7 @@ class QuicksetProtocol(ABC):
         Move specified pan and tilt angles away from the current coordinate.
 
         Args:
-            pan: 
+            pan:
                 Pan coordinate in degrees, between -360.0 and 360.0.
                 Coordinate precision is 0.1 degrees. Passing 0 or None will
                 keep the pan position stationary.
@@ -302,7 +302,7 @@ class QuicksetProtocol(ABC):
                 keep the tilt coordinate stationary.
 
         Returns:
-            data_bytes: 
+            data_bytes:
                 Bytes representing the pan and tilt coordinates. The first two
                 bytes are the little-endian representation of the pan
                 coordinate, and the last two bytes are little-endian
