@@ -92,9 +92,23 @@ class QuicksetProtocol(ABC):
         return new_packet
 
 
-    @abstractmethod
     def __init__(self):
-        pass
+        # NOTE: the PTHR90 and PTCR20 protocols use most of the same command
+        # numbers. Most of the PTHR90 command numbers are the same in the PTCR20;
+        # the main difference is that the PTCR20 defines additional commands.
+        # Thus we put the common commands into the base class and can add any
+        # additional unique commands to the subclasses.
+        self._COMMANDS = {
+            'get_status' : {'func' : self._get_status, 'number': 0x31},
+            'move_absolute' : {'func': self._move_to_entered, 'number': 0x33},
+            'move_delta' : {'func' : self._move_to_delta, 'number' : 0x34},
+            # The home/move to (0,0) command doesn't need any data, so we don't
+            # need a method to prepare the data, hence why we use an anonymous
+            # function that doesn't nothing.
+            'home' : {'func' : lambda: None, 'number' : 0x35},
+        }
+
+        self.COMMAND_NAMES = set(self._COMMANDS.keys())
 
     @abstractmethod
     def assemble_packet(self, cmd_name, *data):
@@ -254,18 +268,6 @@ class PTCR20(QuicksetProtocol):
     def __init__(self, identity=0):
         super().__init__()
 
-        self._COMMANDS = {
-            'get_status' : {'func' : self._get_status, 'number': 0x31},
-            'move_absolute' : {'func': self._move_to_entered, 'number': 0x33},
-            'move_delta' : {'func' : self._move_to_delta, 'number' : 0x34},
-            # The home/move to (0,0) command doesn't need any data, so we don't
-            # need a method to prepare the data, hence why we use an anonymous
-            # function that doesn't nothing.
-            'home' : {'func' : lambda: None, 'number' : 0x35},
-        }
-
-        self.COMMAND_NAMES = set(self._COMMANDS.keys())
-
         self.identity = identity
 
 
@@ -295,22 +297,6 @@ class PTHR90(QuicksetProtocol):
     def __init__(self):
         super().__init__()
 
-        # NOTE: the PTHR90 and PTCR20 protocols use most of the same command
-        # numbers. Most of the PTHR90 command numbers are the same in the PTCR20;
-        # the main difference is that the PTCR20 defines additional commands.
-        # Thus we could put the common commands into the base class and add any
-        # additional unique commands to the subclasses.
-        self._COMMANDS = {
-            'get_status' : {'func' : self._get_status, 'number': 0x31},
-            'move_absolute' : {'func': self._move_to_entered, 'number': 0x33},
-            'move_delta' : {'func' : self._move_to_delta, 'number' : 0x34},
-            # The home/move to (0,0) command doesn't need any data, so we don't
-            # need a method to prepare the data, hence why we use an anonymous
-            # function that doesn't nothing.
-            'home' : {'func' : lambda: None, 'number' : 0x35},
-        }
-
-        self.COMMAND_NAMES = set(self._COMMANDS.keys())
 
 
     def assemble_packet(self, cmd_name, *data):
