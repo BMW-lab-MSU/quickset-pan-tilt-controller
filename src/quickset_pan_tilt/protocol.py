@@ -3,17 +3,19 @@ import numpy as np
 from abc import ABC, abstractmethod
 from collections import namedtuple
 
-ControlCharacters = namedtuple('ControlCharacters', ('STX', 'ETX', 'ACK', 'NACK', 'ESC'))
+ControlCharacters = namedtuple('ControlCharacters',
+                               ('STX', 'ETX', 'ACK', 'NACK', 'ESC'))
+
 
 class QuicksetProtocol(ABC):
 
     CONTROL_CHARS = ControlCharacters(STX=0x02, ETX=0x03, ACK=0x06, NACK=0x15,
-        ESC=0x1b)
+                                      ESC=0x1b)
 
     @staticmethod
     def int_to_bytes(integer):
         """Convert an integer into little-endian bytes.
-        
+
         The Quickset pan-tilt mount protocols format integers as 16-bit
         signed two's-complement little endian integers.
 
@@ -23,13 +25,13 @@ class QuicksetProtocol(ABC):
         Returns:
             bytes: The converted little-endian bytes array.
         """
-        int_bytes = (integer).to_bytes(length=2, byteorder='little', signed=True)
+        int_bytes = integer.to_bytes(length=2, byteorder='little', signed=True)
 
         # Return a bytearray because it is mutable. We need to be able to
         # modify the byte array later on, particularly if we need to insert
         # and escape sequence.
         return bytearray(int_bytes)
-    
+
     @staticmethod
     def cmd_to_byte(cmd_number):
         """Convert the command number into bytes.
@@ -39,23 +41,23 @@ class QuicksetProtocol(ABC):
 
         Args:
             cmd_number: The command number to convert.
-        
+
         Returns:
             byte: The converted command number.
         """
-        byte = (cmd_number).to_bytes(length=1, byteorder='big', signed=False)
+        byte = cmd_number.to_bytes(length=1, byteorder='big', signed=False)
 
         return bytearray(byte)
 
     @staticmethod
     def compute_lrc(byte_array):
         """Calculate the xor-based longitudinal redundancy check.
-        
+
         Args:
             byte_array: 
                 Array of bytes to compute the LRC on. This should start with
                 the command byte and end with the last data byte.
-        
+
         Returns:
             lrc: The checksum.
         """
@@ -67,14 +69,14 @@ class QuicksetProtocol(ABC):
 
         for byte in ints:
             lrc ^= byte
-        
+
         return bytearray((lrc).to_bytes(length=1, signed=False))
 
     @staticmethod
     def insert_escape_sequence(byte):
         # Set bit 7 of the conflicting byte.
         byte |= 0b0100_0000
-        
+
         # Insert the escape character prior to the conflicting byte.
         return bytearray((QuicksetProtocol.CONTROL_CHARS.ESC, byte))
 
@@ -85,12 +87,12 @@ class QuicksetProtocol(ABC):
 
         for byte in packet:
             if byte in QuicksetProtocol.CONTROL_CHARS:
-                new_packet.extend(QuicksetProtocol.insert_escape_sequence(byte))
+                new_packet.extend(
+                    QuicksetProtocol.insert_escape_sequence(byte))
             else:
                 new_packet.append(byte)
 
         return new_packet
-
 
     def __init__(self):
         # NOTE: the PTHR90 and PTCR20 protocols use most of the same command
@@ -99,13 +101,13 @@ class QuicksetProtocol(ABC):
         # Thus we put the common commands into the base class and can add any
         # additional unique commands to the subclasses.
         self._COMMANDS = {
-            'get_status' : {'func' : self._get_status, 'number': 0x31},
-            'move_absolute' : {'func': self._move_to_entered, 'number': 0x33},
-            'move_delta' : {'func' : self._move_to_delta, 'number' : 0x34},
+            'get_status': {'func': self._get_status, 'number': 0x31},
+            'move_absolute': {'func': self._move_to_entered, 'number': 0x33},
+            'move_delta': {'func': self._move_to_delta, 'number': 0x34},
             # The home/move to (0,0) command doesn't need any data, so we don't
             # need a method to prepare the data, hence why we use an anonymous
             # function that doesn't nothing.
-            'home' : {'func' : lambda: None, 'number' : 0x35},
+            'home': {'func': lambda: None, 'number': 0x35},
             'fault_reset': {'func': self._fault_reset, 'number': 0x31},
         }
 
@@ -124,7 +126,7 @@ class QuicksetProtocol(ABC):
                 command name defined in COMMAND_NAMES. 
             *data:
                 Additional positional arguments for the desired command.
-        
+
         Returns:
             packet:
                 The communication packet as a bytes object.
@@ -138,7 +140,7 @@ class QuicksetProtocol(ABC):
         command-specific data-preparation method. The required data depends on
         the specific command, thus any number of additional positional
         arguments can be passed in after the `cmd_name`. 
-        
+
         All other packet preparation is common to all commands, and thus
         doesn't need to be dispatched.
 
@@ -153,10 +155,11 @@ class QuicksetProtocol(ABC):
             packet: 
                 The command, data bytes, and LRC for the desired command.
         """
-        
+
         if cmd_name not in self.COMMAND_NAMES:
-            raise NotImplementedError(f'Command "{cmd_name}" is not implemented.')
-            
+            raise NotImplementedError(
+                f'Command "{cmd_name}" is not implemented.')
+
         cmd_bytes = self.cmd_to_byte(self._COMMANDS[cmd_name]['number'])
 
         # Call the command-specific function to prepare the data bytes.
@@ -167,13 +170,13 @@ class QuicksetProtocol(ABC):
         if data_bytes is not None:
             packet = cmd_bytes + data_bytes
         else:
-            packet = cmd_bytes 
+            packet = cmd_bytes
 
         lrc = self.compute_lrc(packet)
 
         packet.extend(lrc)
 
-        return packet 
+        return packet
 
     @abstractmethod
     def _get_status(self):
@@ -194,10 +197,9 @@ class QuicksetProtocol(ABC):
         focus_jog_cmd = (0).to_bytes()
 
         data_bytes = (reset_cmd + pan_jog_cmd + tilt_jog_cmd + zoom_jog_cmd
-            + focus_jog_cmd)
+                      + focus_jog_cmd)
 
         return data_bytes
-
 
     def _move_to_entered(self, pan=None, tilt=None):
         """Move to entered coordinate.
@@ -281,19 +283,14 @@ class QuicksetProtocol(ABC):
         return data_bytes
 
 
-
-
 class PTCR20(QuicksetProtocol):
-
 
     def __init__(self, identity=0):
         super().__init__()
 
         self.identity = identity
 
-
     def assemble_packet(self, cmd_name, *data):
-
         packet = self._prepare_cmd_and_lrc_packets(cmd_name, *data)
 
         packet.insert(0, self.identity)
@@ -309,19 +306,12 @@ class PTCR20(QuicksetProtocol):
         pass
 
 
-
-        
-
 class PTHR90(QuicksetProtocol):
-
 
     def __init__(self):
         super().__init__()
 
-
-
     def assemble_packet(self, cmd_name, *data):
-
         packet = self._prepare_cmd_and_lrc_packets(cmd_name, *data)
 
         packet = self.escape_control_chars(packet)
@@ -333,4 +323,3 @@ class PTHR90(QuicksetProtocol):
 
     def _get_status(self):
         pass
-
