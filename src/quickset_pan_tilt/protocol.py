@@ -56,16 +56,24 @@ class QuicksetProtocol(ABC):
         return bytearray((lrc).to_bytes(length=1, signed=False))
 
     @staticmethod
-    def insert_escape_sequence(byte):
-        # Set bit 7 of the conflicting byte.
-        byte |= 0b0100_0000
-
-        # Insert the escape character prior to the conflicting byte.
-        return bytearray((QuicksetProtocol.CONTROL_CHARS.ESC, byte))
-
-    @staticmethod
     def escape_control_chars(packet):
+        """Escape bytes that match a control character.
 
+        When a byte matches a control character, it must be escaped by
+        1. inserting an escape character before the byte
+        2. modifying the original byte so it no longer matches the
+           control character.
+
+        Args:
+            packet:
+                The packet of bytes to check for control characters in. 
+
+        Returns:
+            new_packet:
+                The new packet with any control characters removed. If no
+                control characters were present, this is the same as the
+                original packet.
+        """
         new_packet = bytearray()
 
         for byte in packet:
@@ -76,6 +84,25 @@ class QuicksetProtocol(ABC):
                 new_packet.append(byte)
 
         return new_packet
+
+    @staticmethod
+    def insert_escape_sequence(byte):
+        """Insert an escape sequence.
+
+        Args:
+            byte:
+                The byte to escape. 
+
+        Returns:
+            escape_sequence: 
+                An array of bytes containing the escape byte followed by the
+                modified original byte.
+        """
+        # Set bit 7 of the conflicting byte.
+        byte |= 0b0100_0000
+
+        # Insert the escape character prior to the conflicting byte.
+        return bytearray((QuicksetProtocol.CONTROL_CHARS.ESC, byte))
 
     def __init__(self):
         # NOTE: the PTHR90 and PTCR20 protocols use most of the same command
@@ -270,7 +297,6 @@ class PTCR20(QuicksetProtocol):
 
     def __init__(self, identity=0):
         super().__init__()
-
         self.identity = identity
 
     def assemble_packet(self, cmd_name, *data):
