@@ -87,7 +87,7 @@ class QuicksetProtocol(ABC):
         return new_packet
 
     @staticmethod
-    def insert_escape_sequence(byte):
+    def insert_escape_sequence(byte: int):
         """Insert an escape sequence.
 
         Args:
