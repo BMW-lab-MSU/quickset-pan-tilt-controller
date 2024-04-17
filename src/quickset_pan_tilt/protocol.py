@@ -1,4 +1,5 @@
 import struct
+import warnings
 import numpy as np
 from abc import ABC, abstractmethod
 from collections import namedtuple
@@ -119,6 +120,8 @@ class QuicksetProtocol(ABC):
             # function that doesn't nothing.
             'home': {'func': lambda: None, 'number': 0x35},
             'fault_reset': {'func': self._fault_reset, 'number': 0x31},
+            'get_comm_timeout': {'func': self._get_comm_timeout, 'number': 0x96},
+            'set_comm_timeout': {'func': self._set_comm_timeout, 'number': 0x96},
         }
 
         self.COMMAND_NAMES = set(self._COMMANDS.keys())
@@ -210,6 +213,37 @@ class QuicksetProtocol(ABC):
                       + focus_jog_cmd)
 
         return data_bytes
+
+    def _get_comm_timeout(self):
+        """Get the current value of the communication timeout.
+
+        Returns:
+            byte: The timeout command byte to send to the pan-tilt controller.
+        """
+        # Set the query bit (bit 7) to 1.
+        # NOTE: Bit indexing starts at 0 in the QuickSet documentation.
+        byte = (0b1000_0000).to_bytes()
+        return byte
+
+    def _set_comm_timeout(self, timeout):
+        """Set the communication timeout.
+
+        Args:
+            timeout:
+                The timeout value to set. Must be between 0 and 120 seconds.
+                A value of 0 disables the communication timeout.
+
+        Returns:
+            byte: The timeout command byte to send to the pan-tilt controller.
+        """
+        if timeout > 120 or timeout < 0:
+            warnings.warn("Timeout value must be between 0 and 120 seconds."
+                          + " Timeout will not be set.")
+            byte = None
+        else:
+            byte = timeout.to_bytes()
+
+        return byte
 
     def _move_to_entered(self, pan=None, tilt=None):
         """Move to entered coordinate.
