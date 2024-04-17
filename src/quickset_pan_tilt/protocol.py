@@ -100,7 +100,8 @@ class QuicksetProtocol(ABC):
                 modified original byte.
         """
         # Set bit 7 of the conflicting byte.
-        byte |= 0b0100_0000
+        # NOTE: Bit indexing starts at 0 in the QuickSet documentation.
+        byte |= 0b1000_0000
 
         # Insert the escape character prior to the conflicting byte.
         return bytearray((QuicksetProtocol.CONTROL_CHARS.ESC, byte))
