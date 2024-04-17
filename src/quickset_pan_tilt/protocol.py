@@ -33,23 +33,6 @@ class QuicksetProtocol(ABC):
         return bytearray(int_bytes)
 
     @staticmethod
-    def cmd_to_byte(cmd_number):
-        """Convert the command number into bytes.
-
-        The pan-tilt mount needs to receive bytes over the serial port,
-        so must convert integer into a bytes object.
-
-        Args:
-            cmd_number: The command number to convert.
-
-        Returns:
-            byte: The converted command number.
-        """
-        byte = cmd_number.to_bytes(length=1, byteorder='big', signed=False)
-
-        return bytearray(byte)
-
-    @staticmethod
     def compute_lrc(byte_array):
         """Calculate the xor-based longitudinal redundancy check.
 
@@ -160,7 +143,7 @@ class QuicksetProtocol(ABC):
             raise NotImplementedError(
                 f'Command "{cmd_name}" is not implemented.')
 
-        cmd_bytes = self.cmd_to_byte(self._COMMANDS[cmd_name]['number'])
+        cmd_bytes = self._COMMANDS[cmd_name]['number'].to_bytes()
 
         # Call the command-specific function to prepare the data bytes.
         data_bytes = self._COMMANDS[cmd_name]['func'](*data)
