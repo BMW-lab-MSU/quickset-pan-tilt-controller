@@ -113,16 +113,44 @@ class QuicksetProtocol(ABC):
         # Thus we put the common commands into the base class and can add any
         # additional unique commands to the subclasses.
         self._COMMANDS = {
-            'get_status': {'func': self._get_status, 'number': 0x31},
-            'move_absolute': {'func': self._move_to_entered, 'number': 0x33},
-            'move_delta': {'func': self._move_to_delta, 'number': 0x34},
+            'get_status': {
+                'assemble': self._assemble_get_status,
+                'parse': self._parse_get_status,
+                'number': 0x31,
+            },
+            'move_absolute': {
+                'assemble': self._assemble_move_to_entered,
+                'parse': self._parse_move_to_entered,
+                'number': 0x33,
+            },
+            'move_delta': {
+                'assemble': self._assemble_move_to_delta,
+                'parse': self._parse_move_to_delta,
+                'number': 0x34,
+            },
             # The home/move to (0,0) command doesn't need any data, so we don't
             # need a method to prepare the data, hence why we use an anonymous
             # function that doesn't nothing.
-            'home': {'func': lambda: None, 'number': 0x35},
-            'fault_reset': {'func': self._fault_reset, 'number': 0x31},
-            'get_comm_timeout': {'func': self._get_comm_timeout, 'number': 0x96},
-            'set_comm_timeout': {'func': self._set_comm_timeout, 'number': 0x96},
+            'home': {
+                'assemble': lambda: None,
+                'parse': lambda: None,
+                'number': 0x35,
+            },
+            'fault_reset': {
+                'assemble': self._assemble_fault_reset,
+                'parse': self._parse_fault_reset,
+                'number': 0x31,
+            },
+            'get_comm_timeout': {
+                'assemble': self._assemble_get_comm_timeout,
+                'parse': self._parse_get_comm_timeout,
+                'number': 0x96,
+            },
+            'set_comm_timeout': {
+                'assemble': self._assemble_set_comm_timeout,
+                'parse': self._parse_set_comm_timeout,
+                'number': 0x96,
+            },
         }
 
         self.COMMAND_NAMES = set(self._COMMANDS.keys())
@@ -147,7 +175,7 @@ class QuicksetProtocol(ABC):
         """
         pass
 
-    def _prepare_cmd_and_lrc_packets(self, cmd_name: str, *data) -> bytearray:
+    def _assemble_cmd_data_lrc(self, cmd_name: str, *data) -> bytearray:
         """Create the command, data, and lrc bytes for the communication packet.
 
         This method dispatches preparing the data for the command to a
@@ -179,7 +207,7 @@ class QuicksetProtocol(ABC):
         cmd_bytes = bytearray(self._COMMANDS[cmd_name]['number'].to_bytes())
 
         # Call the command-specific function to prepare the data bytes.
-        data_bytes = self._COMMANDS[cmd_name]['func'](*data)
+        data_bytes = self._COMMANDS[cmd_name]['assemble'](*data)
 
         # Some commands don't require any data bytes; thus data_bytes will be
         # empty and should not be included in the command packet.
@@ -195,10 +223,14 @@ class QuicksetProtocol(ABC):
         return packet
 
     @abstractmethod
-    def _get_status(self):
+    def _assemble_get_status(self):
         pass
 
-    def _fault_reset(self) -> bytearray:
+    @abstractmethod
+    def _parse_get_status(self):
+        pass
+
+    def _assemble_fault_reset(self) -> bytearray:
         """Clear any hard faults.
 
         Possible hard faults are timeout, direction error, and current overload.
@@ -219,7 +251,10 @@ class QuicksetProtocol(ABC):
 
         return data_bytes
 
-    def _get_comm_timeout(self) -> bytearray:
+    def _parse_fault_reset(self):
+        pass
+
+    def _assemble_get_comm_timeout(self) -> bytearray:
         """Get the current value of the communication timeout.
 
         Returns:
@@ -233,7 +268,10 @@ class QuicksetProtocol(ABC):
         # operations like extend and insert.
         return bytearray(byte)
 
-    def _set_comm_timeout(self, timeout: int) -> bytearray:
+    def _parse_get_comm_timeout(self):
+        pass
+
+    def _assemble_set_comm_timeout(self, timeout: int) -> bytearray:
         """Set the communication timeout.
 
         Args:
@@ -254,9 +292,12 @@ class QuicksetProtocol(ABC):
         # operations like extend and insert.
         return bytearray(timeout.to_bytes())
 
-    def _move_to_entered(self,
-                         pan: float | None = None,
-                         tilt: float | None = None) -> bytearray:
+    def _parse_set_comm_timeout(self):
+        pass
+
+    def _assemble_move_to_entered(self,
+                                  pan: float | None = None,
+                                  tilt: float | None = None) -> bytearray:
         """Move to entered coordinate.
 
         Args:
@@ -295,9 +336,12 @@ class QuicksetProtocol(ABC):
 
         return data_bytes
 
-    def _move_to_delta(self,
-                       pan: float | None = None,
-                       tilt: float | None = None) -> bytearray:
+    def _parse_move_to_entered(self):
+        pass
+
+    def _assemble_move_to_delta(self,
+                                pan: float | None = None,
+                                tilt: float | None = None) -> bytearray:
         """Move to delta coordinates.
 
         Move specified pan and tilt angles away from the current coordinate.
@@ -339,6 +383,9 @@ class QuicksetProtocol(ABC):
 
         return data_bytes
 
+    def _parse_move_to_delta(self):
+        pass
+
 
 class PTCR20(QuicksetProtocol):
 
@@ -347,7 +394,7 @@ class PTCR20(QuicksetProtocol):
         self.identity = identity
 
     def assemble_packet(self, cmd_name, *data):
-        packet = self._prepare_cmd_and_lrc_packets(cmd_name, *data)
+        packet = self._assemble_cmd_data_lrc(cmd_name, *data)
 
         packet.insert(0, self.identity)
 
@@ -358,7 +405,10 @@ class PTCR20(QuicksetProtocol):
 
         return packet
 
-    def _get_status(self):
+    def _assemble_get_status(self):
+        pass
+
+    def _parse_get_status(self):
         pass
 
 
@@ -368,7 +418,7 @@ class PTHR90(QuicksetProtocol):
         super().__init__()
 
     def assemble_packet(self, cmd_name, *data):
-        packet = self._prepare_cmd_and_lrc_packets(cmd_name, *data)
+        packet = self._assemble_cmd_data_lrc(cmd_name, *data)
 
         packet = self.escape_control_chars(packet)
 
@@ -377,5 +427,8 @@ class PTHR90(QuicksetProtocol):
 
         return packet
 
-    def _get_status(self):
+    def _assemble_get_status(self):
+        pass
+
+    def _parse_get_status(self):
         pass
