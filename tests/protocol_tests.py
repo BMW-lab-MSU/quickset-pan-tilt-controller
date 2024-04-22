@@ -27,5 +27,21 @@ class TestProtocol(unittest.TestCase):
         escaped = QuicksetProtocol.escape_control_chars(to_send)
 
         self.assertEqual(expected, escaped)
+    
+    def test_remove_escape_sequence(self):
+        received = bytes.fromhex("1b9b")
+        expected = bytes.fromhex("1b")
+
+        res = QuicksetProtocol.remove_escape_sequences(received)
+
+        self.assertEqual(expected, res)
+
+    def test_remove_escape_sequence2(self):
+        received = bytes.fromhex("1b821b83")
+        expected = bytes.fromhex("0203")
+
+        res = QuicksetProtocol.remove_escape_sequences(received)
+
+        self.assertEqual(expected, res)
 
         

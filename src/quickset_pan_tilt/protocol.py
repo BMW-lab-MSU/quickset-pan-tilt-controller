@@ -56,6 +56,11 @@ class QuicksetProtocol(ABC):
 
         return bytearray((lrc).to_bytes(length=1, signed=False))
 
+    # TODO: I think we need better names for the escape sequence functions.
+    #       The names are currently very similar and it is unclear which one
+    #       will have a for loop and which won't. It's possible that we should
+    #       maybe just absorb `insert_escape_sequence` into the for loop of
+    #       `escape_control_chars`
     @staticmethod
     def escape_control_chars(packet: bytearray) -> bytearray:
         """Escape bytes that match a control character.
@@ -105,6 +110,40 @@ class QuicksetProtocol(ABC):
 
         # Insert the escape character prior to the conflicting byte.
         return bytearray((QuicksetProtocol.CONTROL_CHARS.ESC, byte))
+
+    @staticmethod
+    def remove_escape_sequences(packet: bytearray) -> bytearray:
+        """Remove escape sequences from the received packet.
+
+        Args:
+            packet: The received packet to check for escape sequences in.
+        
+        Returns:
+            new_packet:
+                The received packet without escape sequences. If no escape
+                sequences were present, this is the same as the original packet.
+        """
+        new_packet = bytearray()
+        found_esc = False
+
+        for byte in packet:
+            if byte == QuicksetProtocol.CONTROL_CHARS.ESC:
+                # Throw out the ESC character and set a flag so we know to
+                # unescape the next byte.
+                found_esc = True
+                continue
+            else:
+                if found_esc:
+                    # Clear bit 7 of the escaped byte
+                    byte &= 0b0111_1111
+
+                    # Clear the ESC flag so we don't think the next byte was
+                    # preceded by an ESC character.
+                    found_sec = False
+
+                new_packet.append(byte)
+        
+        return new_packet
 
     def __init__(self):
         # NOTE: the PTHR90 and PTCR20 protocols use most of the same command
