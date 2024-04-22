@@ -1,58 +1,91 @@
 import serial
 import time
-from abc import ABC
+from abc import ABC, abstractmethod
+import protocol
 
-
+# TODO: we could probably just name this Controller instead of QuicksetController since quickset is the module name
 class QuicksetController(ABC):
-    def __init__(self, ID, protocol, serial_port, baud_rate=9600):
-        self.id: str = ID
-        self.fw_version = None
-        self.soft_limits = []
-        self.CMD_LIST = set()
-
-        self.serial = serial.Serial(port=serial_port, baudrate=baud_rate)
+    @abstractmethod
+    def __init__(self):
+        self.protocol = None
 
     def home(self):
-        self.send(33, 0, 0)
+        packet = self.protocol.assemble_packet('home')
+        self._send(packet)
+
+        rx = self._receive()
+        # self.protocol.parse_packet(rx)
 
     def move_delta(self, pan, tilt):
-        self.send(31, pan, tilt)
+        packet = self.protocol.assemble_packet('move_delta', pan, tilt)
+        self._send(packet)
+
+        rx = self._receive()
+        # self.protocol.parse_packet(rx)
 
     def move_absolute(self, pan, tilt):
-        self.send(33, pan, tilt)
+        packet = self.protocol.assemble_packet('move_absolute', pan, tilt)
+        self._send(packet)
 
-    def get_status(self):
-        Status = self.send(30)
-        return Status
+        rx = self._receive()
+        # self.protocol.parse_packet(rx)
 
-    def calculate_lrc(self, data):
-        lrc = bytes.fromhex('00')  # Initialize LRC value to zero
-        print(f"DATA: {data}")
-        bytedata = [int(d) for d in data]
-        print(f"INT DATA: {bytedata}")
-        for byte in bytedata:
-            # Print binary representation of each byte
-            print(f"BYTE: {(byte)[2:].zfill(8)} for byte: {byte}")
-            lrc ^= byte
-        # Print binary representation of the final LRC value
-        print(f"LRC: {bin(lrc)[2:].zfill(8)}")
-        return bytes([lrc])  # Return LRC value as a byte
+    def fault_reset(self):
+        packet = self.protocol.assemble_packet('fault_reset')
 
-    def send(self, cmd):
+    # def get_status(self):
+        # Status = self.send(30)
+        # return Status
 
-        self.serial.write(bytes.fromhex('02'))  # Send Start
-        self.serial.write(bytes.fromhex(self.ID))  # Send ID
+    @abstractmethod
+    def _send(self, packet):
+        pass
 
-        if data is not None:
-            command = bytes.fromhex(command)
-            data = bytes.fromhex(data)
-            self.serial.write(command)
-            self.serial.write(data)
-            self.serial.write(self.calculate_lrc(command + data))
-        else:
-            command = bytes.fromhex(command)
-            self.serial.write(command)
-            self.serial.write(self.calculate_lrc(command))
+    @abstractmethod
+    def _receive(self) -> bytearray:
+        pass
 
-        self.serial.write(self.ETX)
-        time.sleep(0.005)
+class ControllerSerial(QuicksetController):
+    @abstractmethod
+    def __init__(self, port, timeout=1, baud=9600):
+        super().__init__()
+        self.serial = serial.Serial(port=port, timeout=timeout, baudrate=baud)
+
+    def _send(self, packet: bytearray):
+        self.serial.write(packet)
+        # TODO: should we make sure we actually sent something?
+
+    def _receive(self) -> bytearray:
+        rx = bytearray()
+        recv_byte = None
+        ACK_WAIT_TIME = 10
+
+        # Wait for ACK. If we never receive ACK, we should return and resend the command.
+        # TODO: do we need to bother with looping a set number of times until we receive ACK?
+        for i in range(ACK_WAIT_TIME):
+            recv_byte = self.serial.read(1)
+            if len(recv_byte) == 0:
+                # The pan-tilt didn't return anything after the read timeout,
+                # so most likely nothing is in the buffer / being sent.
+                return None
+
+            elif recv_byte == self.protocol.CONTROL_CHARS.ACK:
+                rx.extend(recv_byte)
+                break;
+
+            elif i == (ACK_WAIT_TIME - 1):
+                # We didn't receive an ACK character yet, so we're assuming
+                # that the transmission is corrupt and should start over.
+                return None
+
+        # Read bytes until we hit ETX
+        while recv_byte != self.protocol.CONTROL_CHARS.ETX:
+            recv_byte = self.serial.read(1)
+            rx.extend(recv_byte)
+
+        return rx
+
+class QPT20Serial(ControllerSerial):
+    def __init__(self, port, timeout=1, baud=9600):
+        super().__init__(port, timeout, baud)
+        self.protocol = protocol.PTCR20()
