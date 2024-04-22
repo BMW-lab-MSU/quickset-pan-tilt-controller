@@ -34,6 +34,27 @@ class QuicksetProtocol(ABC):
         return bytearray(int_bytes)
 
     @staticmethod
+    def bytes_to_int(two_bytes: bytes) -> int:
+        """Convert two little-endian bytes into an integer.
+
+        Args:
+            two_bytes: The bytes to convert. This must have a length of 2.
+
+        Returns:
+            integer: The converted integer.
+        """
+        # Unpack the little-endian bytes as a signed two's complement integer.
+        # '<' is for little-endian, and 'h' is for 'short'
+        # (i.e., a signed two-byte integer).
+        unpacked = struct.unpack('<h', two_bytes)
+
+        # struct.unpack always returns a tuple, but we want to have an int,
+        # so we index into the tuple.
+        integer = unpacked[0]
+
+        return integer
+
+    @staticmethod
     def compute_lrc(byte_array: bytes) -> bytearray:
         """Calculate the xor-based longitudinal redundancy check.
 
