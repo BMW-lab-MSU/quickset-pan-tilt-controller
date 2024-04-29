@@ -291,7 +291,7 @@ class QuicksetProtocol(ABC):
         # check if there are other "preamble" bytes in some of the other
         # Quickset protocols; if there are, this function could maybe handle
         # all the preamble stuff that is specific to a particular protocol.
-        local_packet = self._remove_identity_byte(local_packet)
+        self._remove_identity_byte(local_packet)
 
         # Computing the LRC of the cmd, data, and received LRC will return 0
         # if the nothing is corrupted; this is because the LRC of the cmd and
@@ -346,52 +346,26 @@ class QuicksetProtocol(ABC):
         # an identity byte. If it does, the subclass can override this method.
         return packet
 
-    def _assemble_cmd_data_lrc(self, cmd_name: str, *data) -> bytearray:
-        """Create the command, data, and lrc bytes for the communication packet.
+    def _remove_identity_byte(self, packet: bytearray):
+        """Remove the identity byte in-place if it is part of the packet protocol.
 
-        This method dispatches preparing the data for the command to a
-        command-specific data-preparation method. The required data depends on
-        the specific command, thus any number of additional positional
-        arguments can be passed in after the `cmd_name`.
+        Some Quickset protocols include an identity byte for the pan-tilt
+        controller, while others do not. If the protocol includes the identity
+        byte, this function will remove that byte; otherwise, the packet will
+        remain unaltered.
 
-        All other packet preparation is common to all commands, and thus
-        doesn't need to be dispatched.
+        It is expected and required that the first byte in the input packet is
+        the identity byte.
 
         Args:
-            cmd_name:
-                The name of the desired command. This command name must match a
-                command name defined in COMMAND_NAMES.
-            *data:
-                Additional positional arguments for the desired command.
+            packet: The input packet to remove the identity byte from.
 
         Returns:
-            packet:
-                The command, data bytes, and LRC for the desired command.
+            None: The array is modified in-place.
         """
-
-        if cmd_name not in self.COMMAND_NAMES:
-            raise NotImplementedError(
-                f'Command "{cmd_name}" is not implemented.')
-
-        # cmd_bytes needs to be a bytearray so we can support mutable sequence
-        # operations like extend and insert.
-        cmd_bytes = bytearray(self._COMMANDS[cmd_name]['number'].to_bytes())
-
-        # Call the command-specific function to prepare the data bytes.
-        data_bytes = self._COMMANDS[cmd_name]['assemble'](*data)
-
-        # Some commands don't require any data bytes; thus data_bytes will be
-        # empty and should not be included in the command packet.
-        if data_bytes is not None:
-            packet = cmd_bytes + data_bytes
-        else:
-            packet = cmd_bytes
-
-        lrc = self.compute_lrc(packet)
-
-        packet.extend(lrc)
-
-        return packet
+        # NOTE: by default, we will assume that the protocol does not include
+        # an identity byte. If it does, the subclass can override this method.
+        pass
 
     @abstractmethod
     def _assemble_get_status(self):
@@ -585,22 +559,11 @@ class PTCR20(QuicksetProtocol):
 
         packet.insert(0, self.identity)
 
-        packet = self.escape_control_chars(packet)
-
-        packet.insert(0, self.CONTROL_CHARS.STX)
-        packet.append(self.CONTROL_CHARS.ETX)
-
-        return packet
-
-    def _remove_identity_byte(self, packet: bytearray) -> bytearray:
-        new_packet = packet
-        
+    def _remove_identity_byte(self, packet: bytearray):
         # The identity byte is assumed to be the first byte since the ACK byte
         # will have been removed before this is called.
-        del new_packet[0]
+        del packet[0]
 
-        return new_packet
-        
     def _assemble_get_status(self):
         pass
 
