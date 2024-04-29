@@ -69,7 +69,7 @@ class ControllerSerial(QuicksetController):
                 # so most likely nothing is in the buffer / being sent.
                 return None
 
-            elif recv_byte == self.protocol.CONTROL_CHARS.ACK:
+            elif recv_byte == self.protocol.CONTROL_CHARS.ACK.to_bytes():
                 rx.extend(recv_byte)
                 break;
 
@@ -79,7 +79,7 @@ class ControllerSerial(QuicksetController):
                 return None
 
         # Read bytes until we hit ETX
-        while recv_byte != self.protocol.CONTROL_CHARS.ETX:
+        while recv_byte != self.protocol.CONTROL_CHARS.ETX.to_bytes():
             recv_byte = self.serial.read(1)
             rx.extend(recv_byte)
 
