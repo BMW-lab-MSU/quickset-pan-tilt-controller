@@ -215,7 +215,6 @@ class QuicksetProtocol(ABC):
 
         self.COMMAND_NAMES = set(self._COMMANDS.keys())
 
-    @abstractmethod
     def assemble_packet(self, cmd_name: str, *data) -> bytearray:
         """Assemble the communication packet for a command.
 
@@ -233,7 +232,65 @@ class QuicksetProtocol(ABC):
             packet:
                 The communication packet as a bytes object.
         """
-        pass
+        packet = self._assemble_cmd_data_lrc(cmd_name, *data)
+
+        # Add the identity byte if the protocol requires it, otherwise leave
+        # the packet as is.
+        self._add_identity_byte(packet)
+
+        packet = self.escape_control_chars(packet)
+
+        packet.insert(0, self.CONTROL_CHARS.STX)
+        packet.append(self.CONTROL_CHARS.ETX)
+
+        return packet
+
+    def _assemble_cmd_data_lrc(self, cmd_name: str, *data) -> bytearray:
+        """Create the command, data, and lrc bytes for the communication packet.
+
+        This method dispatches preparing the data for the command to a
+        command-specific data-preparation method. The required data depends on
+        the specific command, thus any number of additional positional
+        arguments can be passed in after the `cmd_name`.
+
+        All other packet preparation is common to all commands, and thus
+        doesn't need to be dispatched.
+
+        Args:
+            cmd_name:
+                The name of the desired command. This command name must match a
+                command name defined in COMMAND_NAMES.
+            *data:
+                Additional positional arguments for the desired command.
+
+        Returns:
+            packet:
+                The command, data bytes, and LRC for the desired command.
+        """
+
+        if cmd_name not in self.COMMAND_NAMES:
+            raise NotImplementedError(
+                f'Command "{cmd_name}" is not implemented.')
+
+        # cmd_bytes needs to be a bytearray so we can support mutable sequence
+        # operations like extend and insert.
+        cmd_bytes = bytearray(self._COMMANDS[cmd_name]['number'].to_bytes())
+
+        # Call the command-specific function to prepare the data bytes.
+        data_bytes = self._COMMANDS[cmd_name]['assemble'](*data)
+
+        # Some commands don't require any data bytes; thus data_bytes will be
+        # empty and should not be included in the command packet.
+        if data_bytes is not None:
+            packet = cmd_bytes + data_bytes
+        else:
+            packet = cmd_bytes
+
+        lrc = self.compute_lrc(packet)
+
+        packet.extend(lrc)
+
+        return packet
 
     def parse_packet(self, cmd_name: str, packet: bytearray) -> tuple | None:
         """Parse a received communication packet.
@@ -325,26 +382,24 @@ class QuicksetProtocol(ABC):
         # know how to parse the data appropriately. We simply return the tuple.
         return data
 
-    def _remove_identity_byte(self, packet: bytearray) -> bytearray:
-        """Remove the identity byte if it is part of the packet protocol.
-        
+    def _add_identity_byte(self, packet: bytearray):
+        """Add the identity byte in-place if it is part of the packet protocol.
+
         Some Quickset protocols include an identity byte for the pan-tilt
         controller, while others do not. If the protocol includes the identity
-        byte, this function will remove that byte; otherwise, the packet will
+        byte, this function will add that byte; otherwise, the packet will
         remain unaltered.
 
-        It is expected and required that the first byte in the input packet is
-        the identity byte.
-
         Args:
-            packet: The input packet to remove the identity byte from.
-        
-        Returns:
+            packet: The input packet to add the identity byte to.
             new_packet: The input packet with the identity byte removed.
+
+        Returns:
+            None: The array is modified in-place.
         """
         # NOTE: by default, we will assume that the protocol does not include
         # an identity byte. If it does, the subclass can override this method.
-        return packet
+        pass
 
     def _remove_identity_byte(self, packet: bytearray):
         """Remove the identity byte in-place if it is part of the packet protocol.
@@ -554,9 +609,7 @@ class PTCR20(QuicksetProtocol):
         super().__init__()
         self.identity = identity
 
-    def assemble_packet(self, cmd_name, *data):
-        packet = self._assemble_cmd_data_lrc(cmd_name, *data)
-
+    def _add_identity_byte(self, packet: bytearray):
         packet.insert(0, self.identity)
 
     def _remove_identity_byte(self, packet: bytearray):
@@ -575,16 +628,6 @@ class PTHR90(QuicksetProtocol):
 
     def __init__(self):
         super().__init__()
-
-    def assemble_packet(self, cmd_name, *data):
-        packet = self._assemble_cmd_data_lrc(cmd_name, *data)
-
-        packet = self.escape_control_chars(packet)
-
-        packet.insert(0, self.CONTROL_CHARS.STX)
-        packet.append(self.CONTROL_CHARS.ETX)
-
-        return packet
 
     def _assemble_get_status(self):
         pass
