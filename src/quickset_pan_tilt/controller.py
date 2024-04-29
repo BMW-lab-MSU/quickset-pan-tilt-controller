@@ -1,5 +1,6 @@
 import serial
 import time
+import warnings
 from abc import ABC, abstractmethod
 import protocol
 
@@ -8,6 +9,35 @@ class QuicksetController(ABC):
     @abstractmethod
     def __init__(self):
         self.protocol = None
+
+    @property
+    def communication_timeout(self):
+        CMD_NAME = 'get_communication_timeout'
+
+        packet = self.protocol.assemble_packet(CMD_NAME)
+        self._send(packet)
+
+        rx = self._receive()
+        communication_timeout = self.protocol.parse_packet(CMD_NAME, rx)
+
+        return communication_timeout
+
+    @communication_timeout.setter
+    def communication_timeout(self, timeout):
+        CMD_NAME = 'set_communication_timeout'
+
+        # Send the desired timeout to the pan-tilt controller
+        packet = self.protocol.assemble_packet(CMD_NAME, timeout)
+        self._send(packet)
+
+        # Read back the response from the pan-tilt controller to make sure the
+        # timeout was actually set.
+        rx = self._receive()
+        actual_timeout = self.protocol.parse_packet(CMD_NAME, rx)
+
+        if timeout != actual_timeout:
+            warnings.warn("Communication timeout was not set successfully."
+                f" Desired value: {timeout}, actual value: {actual_timeout}")
 
     def home(self):
         packet = self.protocol.assemble_packet('home')

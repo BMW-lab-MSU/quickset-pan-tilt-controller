@@ -201,14 +201,14 @@ class QuicksetProtocol(ABC):
                 'parse': self._parse_fault_reset,
                 'number': 0x31,
             },
-            'get_comm_timeout': {
-                'assemble': self._assemble_get_comm_timeout,
-                'parse': self._parse_get_comm_timeout,
+            'get_communication_timeout': {
+                'assemble': self._assemble_get_communication_timeout,
+                'parse': self._parse_communication_timeout,
                 'number': 0x96,
             },
-            'set_comm_timeout': {
-                'assemble': self._assemble_set_comm_timeout,
-                'parse': self._parse_set_comm_timeout,
+            'set_communication_timeout': {
+                'assemble': self._assemble_set_communication_timeout,
+                'parse': self._parse_communication_timeout,
                 'number': 0x96,
             },
         }
@@ -425,8 +425,8 @@ class QuicksetProtocol(ABC):
     def _parse_fault_reset(self):
         pass
 
-    def _assemble_get_comm_timeout(self) -> bytearray:
-        """Get the current value of the communication timeout.
+    def _assemble_get_communication_timeout(self) -> bytearray:
+        """Assemble a packet to get the current value of the communication timeout.
 
         Returns:
             byte: The timeout command byte to send to the pan-tilt controller.
@@ -439,10 +439,29 @@ class QuicksetProtocol(ABC):
         # operations like extend and insert.
         return bytearray(byte)
 
-    def _parse_get_comm_timeout(self):
-        pass
+    def _parse_communication_timeout(self, packet: bytearray) -> int:
+        """Parse the current communication timeout value.
 
-    def _assemble_set_comm_timeout(self, timeout: int) -> bytearray:
+        Args:
+            packet: The data byte associated with the "get communication
+            timeout" packet sent by the pan-tilt controller.
+
+        Returns:
+            timeout: The pan-tilt controller's communication timeout, in seconds.
+        """
+        if len(packet) > 1:
+            raise RuntimeError("Packet is too long."
+                                   " It should only have one byte, but it has"
+                                   f" {len(packet)} bytes.")
+
+
+        # The timeout value is in bits 6--0 of the data packet, so we mask
+        # those bits.
+        timeout = packet[0] & 0b0111_1111
+
+        return timeout
+
+    def _assemble_set_communication_timeout(self, timeout: int) -> bytearray:
         """Set the communication timeout.
 
         Args:
@@ -462,9 +481,6 @@ class QuicksetProtocol(ABC):
         # Return a bytearray because we need to support mutable sequence
         # operations like extend and insert.
         return bytearray(timeout.to_bytes())
-
-    def _parse_set_comm_timeout(self):
-        pass
 
     def _assemble_move_to_entered(self,
                                   pan: float | None = None,
