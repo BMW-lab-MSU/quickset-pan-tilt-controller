@@ -235,6 +235,117 @@ class QuicksetProtocol(ABC):
         """
         pass
 
+    def parse_packet(self, cmd_name: str, packet: bytearray) -> tuple | None:
+        """Parse a received communication packet.
+        
+        Args:
+            cmd_name:
+                The name of the command that was received and needs to be
+                parsed. This command name must match a command name defined
+                in COMMAND_NAMES.
+            packet:
+                The packet to be parsed.
+
+        Returns:
+            data:
+                The returned data varies based upon the command, so the caller
+                must know how to parse the returned data.
+
+        Raises:
+            RuntimeException:
+                A RuntimeException is raised if the packet is invalid, the packet
+                is corrupted (i.e., the LRC doesn't match), or if the received
+                packet does not match the command defined by `cmd_name`.
+        """
+        # TODO: what do we do if we receive a NACK?
+
+        # Create a local copy of the packet because we don't want to modify the
+        # original packet; the calling function would likely be surprised that
+        # the packet they passed to us has been modified.
+        local_packet = packet[:]
+
+        # In general, we already know that ACK will be the first byte
+        # because the controller won't receive a packet unless there is an ACK
+        # at the beginning and an ETC at the end. Therefore, the packet we
+        # receive should generally be valid; however, we will check anyway
+        # just in case.
+        ack_received = local_packet[0] == self.CONTROL_CHARS.ACK
+        etx_received = local_packet[-1] == self.CONTROL_CHARS.ETX
+        if ack_received and etx_received:
+            packet_valid = True
+        else:
+            packet_valid = False
+            raise RuntimeError("Packet is invalid")
+
+        # Remove the ack and etx bytes so we don't have to worry about them
+        # down the line when computing the LRC or parsing the data bytes.
+        del local_packet[0]
+        del local_packet[-1]
+
+        # Escape sequences must be removed before parsing anything.
+        local_packet = self.remove_escape_sequences(local_packet)
+
+        # If the protocol uses an identity byte, remove it; otherwise, the
+        # packet will be left unaltered.
+        # TODO: there might be a better name for this function. I'd have to
+        # check if there are other "preamble" bytes in some of the other
+        # Quickset protocols; if there are, this function could maybe handle
+        # all the preamble stuff that is specific to a particular protocol.
+        local_packet = self._remove_identity_byte(local_packet)
+
+        # Computing the LRC of the cmd, data, and received LRC will return 0
+        # if the nothing is corrupted; this is because the LRC of the cmd and
+        # data will be the same as the LRC byte, and xor'ing the cmd/data LRC
+        # with an identical LRC byte will return 0. We want the returned LRC to
+        # be an integer instead of a bytearray this time so we can compare to
+        # an int, so we index into the byte array to return the underlying int.
+        lrc = self.compute_lrc(local_packet)[0]
+        if lrc != 0:
+            raise RuntimeError("LRC does not match. Packet was corrupted.")
+
+        # We don't need the lrc packet anymore
+        del local_packet[-1]
+
+        # Make sure the command number we received is actually the command we
+        # are expecting. If this is not the case, that most likely means the
+        # caller passed the wrong command name to us.
+        cmd_number = local_packet[0]
+        expected_cmd_number = self._COMMANDS[cmd_name]['number']
+        if expected_cmd_number != cmd_number:
+            raise RuntimeError(f"Received command number {cmd_number} does"
+                " not mach expected command number {expected_cmd_number}.")
+
+        # We don't need the command packet anymore
+        del local_packet[0]
+
+        # Packet is good so far, so now we can actually handle parsing the data.
+        data = self._COMMANDS[cmd_name]['parse'](local_packet)
+
+        # The data tuple can vary depending on the command, so the caller must
+        # know how to parse the data appropriately. We simply return the tuple.
+        return data
+
+    def _remove_identity_byte(self, packet: bytearray) -> bytearray:
+        """Remove the identity byte if it is part of the packet protocol.
+        
+        Some Quickset protocols include an identity byte for the pan-tilt
+        controller, while others do not. If the protocol includes the identity
+        byte, this function will remove that byte; otherwise, the packet will
+        remain unaltered.
+
+        It is expected and required that the first byte in the input packet is
+        the identity byte.
+
+        Args:
+            packet: The input packet to remove the identity byte from.
+        
+        Returns:
+            new_packet: The input packet with the identity byte removed.
+        """
+        # NOTE: by default, we will assume that the protocol does not include
+        # an identity byte. If it does, the subclass can override this method.
+        return packet
+
     def _assemble_cmd_data_lrc(self, cmd_name: str, *data) -> bytearray:
         """Create the command, data, and lrc bytes for the communication packet.
 
@@ -465,6 +576,15 @@ class PTCR20(QuicksetProtocol):
 
         return packet
 
+    def _remove_identity_byte(self, packet: bytearray) -> bytearray:
+        new_packet = packet
+        
+        # The identity byte is assumed to be the first byte since the ACK byte
+        # will have been removed before this is called.
+        del new_packet[0]
+
+        return new_packet
+        
     def _assemble_get_status(self):
         pass
 
