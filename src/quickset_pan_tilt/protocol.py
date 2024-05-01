@@ -8,6 +8,7 @@ ControlCharacters = namedtuple('ControlCharacters',
                                ('STX', 'ETX', 'ACK', 'NACK', 'ESC'))
 
 
+# TODO: we could probably just name this Protocol instead of QuicksetProtocol since quickset is the module name
 class QuicksetProtocol(ABC):
 
     CONTROL_CHARS = ControlCharacters(STX=0x02, ETX=0x03, ACK=0x06, NACK=0x15,
@@ -138,7 +139,7 @@ class QuicksetProtocol(ABC):
 
         Args:
             packet: The received packet to check for escape sequences in.
-        
+
         Returns:
             new_packet:
                 The received packet without escape sequences. If no escape
@@ -163,7 +164,7 @@ class QuicksetProtocol(ABC):
                     found_sec = False
 
                 new_packet.append(byte)
-        
+
         return new_packet
 
     def __init__(self):
@@ -294,7 +295,7 @@ class QuicksetProtocol(ABC):
 
     def parse_packet(self, cmd_name: str, packet: bytearray) -> tuple | None:
         """Parse a received communication packet.
-        
+
         Args:
             cmd_name:
                 The name of the command that was received and needs to be
@@ -370,7 +371,7 @@ class QuicksetProtocol(ABC):
         expected_cmd_number = self._COMMANDS[cmd_name]['number']
         if expected_cmd_number != cmd_number:
             raise RuntimeError(f"Received command number {cmd_number} does"
-                " not mach expected command number {expected_cmd_number}.")
+                               " not mach expected command number {expected_cmd_number}.")
 
         # We don't need the command packet anymore
         del local_packet[0]
@@ -480,9 +481,8 @@ class QuicksetProtocol(ABC):
         """
         if len(packet) > 1:
             raise RuntimeError("Packet is too long."
-                                   " It should only have one byte, but it has"
-                                   f" {len(packet)} bytes.")
-
+                               " It should only have one byte, but it has"
+                               f" {len(packet)} bytes.")
 
         # The timeout value is in bits 6--0 of the data packet, so we mask
         # those bits.
