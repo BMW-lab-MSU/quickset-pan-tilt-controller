@@ -62,6 +62,8 @@ class QuicksetController(ABC):
 
     def fault_reset(self):
         packet = self.protocol.assemble_packet('fault_reset')
+        self._send(packet)
+
 
     # def get_status(self):
         # Status = self.send(30)
