@@ -2,7 +2,8 @@ import serial
 import time
 import warnings
 from abc import ABC, abstractmethod
-import protocol
+
+from quickset_pan_tilt import protocol
 
 # TODO: we could probably just name this Controller instead of QuicksetController since quickset is the module name
 class QuicksetController(ABC):
