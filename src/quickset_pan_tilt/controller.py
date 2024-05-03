@@ -9,7 +9,32 @@ from quickset_pan_tilt import protocol
 class QuicksetController(ABC):
     @abstractmethod
     def __init__(self):
+        # These internal attributes should be accessed with the "public"
+        # read-only properties defined by the associated @property decorators.
+        # TODO: maybe we should implement setters for pan and tilt that will
+        # call the move_absolute method under the hood.
+        self._pan = None
+        self._tilt = None
+        self._pan_destination = None
+        self._tilt_destination = None
+
         self.protocol = None
+
+    @property
+    def pan(self):
+        return self._pan
+
+    @property
+    def tilt(self):
+        return self._tilt
+
+    @property
+    def pan_destination(self):
+        return self._pan_destination
+
+    @property
+    def tilt_destination(self):
+        return self._tilt_destination
 
     @property
     def communication_timeout(self):

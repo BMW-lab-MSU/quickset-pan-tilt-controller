@@ -168,6 +168,7 @@ class QuicksetProtocol(ABC):
         return new_packet
 
     def __init__(self):
+
         # NOTE: the PTHR90 and PTCR20 protocols use most of the same command
         # numbers. Most of the PTHR90 command numbers are the same in the PTCR20;
         # the main difference is that the PTCR20 defines additional commands.
