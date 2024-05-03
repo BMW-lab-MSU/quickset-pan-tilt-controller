@@ -1,18 +1,23 @@
+import bitfield
 import struct
 import warnings
 import numpy as np
 from abc import ABC, abstractmethod
 from collections import namedtuple
+from ctypes import c_bool, c_uint8
 
 ControlCharacters = namedtuple('ControlCharacters',
                                ('STX', 'ETX', 'ACK', 'NACK', 'ESC'))
-
 
 # TODO: we could probably just name this Protocol instead of QuicksetProtocol since quickset is the module name
 class QuicksetProtocol(ABC):
 
     CONTROL_CHARS = ControlCharacters(STX=0x02, ETX=0x03, ACK=0x06, NACK=0x15,
                                       ESC=0x1b)
+
+    # The pan/tilt angle resolution in 0.1 degrees, but the pan/tilt angles are
+    # specified as integers, so the actual angles are multiplied by 10.
+    _ANGLE_MULTIPLIER = 10
 
     @staticmethod
     def int_to_bytes(integer: int) -> bytearray:
@@ -425,11 +430,24 @@ class QuicksetProtocol(ABC):
         pass
 
     @abstractmethod
-    def _assemble_get_status(self):
+    def _assemble_get_status(self) -> bytearray:
+        """Assemble a packet to get the pan-tilt's status
+
+        Returns:
+            packet: Get status command and data bytes.
+        """
         pass
 
     @abstractmethod
-    def _parse_get_status(self):
+    def _parse_get_status(self, status):
+        """Parse the status packet returned by the pan-tilt.
+
+        Args:
+            status:
+                A StatusReponse namedtuple. The exact fields of the tuple
+                differ for different protocols.
+            
+        """
         pass
 
     def _assemble_fault_reset(self) -> bytearray:
@@ -542,8 +560,8 @@ class QuicksetProtocol(ABC):
 
         # Pan and tilt coordinates need to be sent as integers, so we have to
         # multiply by 10 to get the coordinates in the right range.
-        pan = int(pan * 10)
-        tilt = int(tilt * 10)
+        pan = int(pan * self._ANGLE_MULTIPLIER)
+        tilt = int(tilt * self._ANGLE_MULTIPLIER)
 
         pan_bytes = self.int_to_bytes(pan)
         tilt_bytes = self.int_to_bytes(tilt)
@@ -606,6 +624,51 @@ class QuicksetProtocol(ABC):
 
 class PTCR20(QuicksetProtocol):
 
+    GenStatus = bitfield.make_bf(name='GenStatus', basetype=c_uint8,
+                                 fields=[
+                                     ('DWNM', c_bool, 1),
+                                     ('UPM', c_bool, 1),
+                                     ('CCWM', c_bool, 1),
+                                     ('CWM', c_bool, 1),
+                                     ('OSLR', c_bool, 1),
+                                     ('DES', c_bool, 1),
+                                     ('EXEC', c_bool, 1),
+                                     ('ENC', c_bool, 1),
+                                 ])
+    GenStatus.__doc__ = """\
+    General status bit set.
+
+    From LSB to MSB, the bits are:
+    - DWNM: Down axis moving.
+    - UPM: Up axis moving.
+    - CCWM: Counter-clockwise axis moving.
+    - CWM: Clockwise axis moving.
+    - OSLR: Controller is in soft limit override mode.
+    - DES: Whether the returned coordinates are destination coordinates.
+    - EXEC: Whether a move is currently executing.
+    - ENC: Pan-tilt mount is encoder-based and soft/hard limits are ignored.
+    """
+
+    StatusResponse = namedtuple('StatusResponse',
+                                ('pan', 'tilt', 'pan_status', 'tilt_status', 
+                                 'gen_status', 'zoom','focus', 'n_cameras',
+                                 'camera_data')
+            )
+    StatusResponse.__doc__ = """\
+    PTCR20 Status response tuple.    
+
+    Attributes:
+        pan: Pan coordinate.
+        tilt: Tilt coordinate.
+        pan_status: Pan status bitset from the PanStatus BitField.
+        tilt_status: Tilt status bitset from the TiltStatus BitField.
+        gen_status: General status bitset from the GenStatus BitField.
+        zoom: Zoom coordinate.
+        focus: Focus coordinate.
+        n_cameras: Number of cameras installed.
+        camera_data: Any camera data associated with the installed cameras.
+    """
+
     def __init__(self, identity=0):
         super().__init__()
         self.identity = identity
@@ -619,13 +682,94 @@ class PTCR20(QuicksetProtocol):
         del packet[0]
 
     def _assemble_get_status(self):
-        pass
+        """Assemble a basic 'get status' packet.
+        
+        The format of the get status packet, from MSB to LSB is:
+        1. status bitset
+        2. pan jog
+        3. tilt jog
+        4. zoom jog
+        5. focus jog
 
-    def _parse_get_status(self):
-        pass
+        Since this particular get status command is only intended to
+        get the status, all of the bytes are set to 0.
+
+        Returns:
+            packet: The get status packet to send to the pan-tilt controller.
+        """
+        cmd = GetStatusCmd();
+
+        pan_jog = 0
+        tilt_jog = 0
+        zoom_jog = 0
+        focus_jog = 0
+
+        return bytearray((cmd.base, pan_jog, tilt_jog, zoom_jog, focus_jog))
+
+
+    def _parse_get_status(self, packet: bytearray):
+        """Parse a status response from the pan-tilt mount.
+
+        Args:
+            packet: The status response to parse.
+
+        Returns:
+            status:
+                A StatusReponse namedtuple containing the following fields:
+                - pan: the pan coordinate
+                - tilt: the tilt coordinate
+                - pan_status: pan status bits
+                - tilt_status: tilt status bits
+                - gen_status: general status bits
+                - zoom: zoom coordinate
+                - focus: focus coordinate
+                - n_cameras: number of cameras
+                - camera_data: camera data; None if no cameras are attached
+        """
+        
+        pan = self.bytes_to_int(packet[0:2]) / self._ANGLE_MULTIPLIER
+        tilt = self.bytes_to_int(packet[2:4]) / self._ANGLE_MULTIPLIER
+
+        # In the following, we have to assign the status integer to the base
+        # property of the BitField object. This was not obvious from the
+        # bitfield documentation.
+        pan_status = PanStatus()
+        pan_status.base = packet[4]
+
+        tilt_status = TiltStatus()
+        tilt_status.base = packet[5]
+
+        gen_status = self.GenStatus()
+        gen_status.base = packet[6]
+
+        zoom = packet[7]
+        focus = packet[8]
+
+        n_cameras = packet[9]
+
+        # If a camera is present, the rest of the packet will be camera data
+        if len(packet) > 10:
+            camera_data = packet[10:]
+        else:
+            camera_data = None
+
+        return self.StatusResponse(pan, tilt, pan_status, tilt_status, gen_status,
+                              zoom, focus, n_cameras, camera_data)
 
 
 class PTHR90(QuicksetProtocol):
+
+    GenStatus = bitfield.make_bf(name='GenStatus', basetype=c_uint8,
+                                    fields=[
+                                        ('DWNM', c_bool, 1),
+                                        ('UPM', c_bool, 1),
+                                        ('CCWM', c_bool, 1),
+                                        ('CWM', c_bool, 1),
+                                        ('OSLR', c_bool, 1),
+                                        ('DES', c_bool, 1),
+                                        ('EXEC', c_bool, 1),
+                                        ('HRES', c_bool, 1),
+                                    ])
 
     def __init__(self):
         super().__init__()
@@ -635,3 +779,70 @@ class PTHR90(QuicksetProtocol):
 
     def _parse_get_status(self):
         pass
+
+GetStatusCmd = bitfield.make_bf(name='GetStatusCmd', basetype=c_uint8,
+                                fields=[
+                                    ('RES', c_bool, 1),
+                                    ('STOP', c_bool, 1),
+                                    ('OSL', c_bool, 1),
+                                    ('RU', c_bool, 1),
+                                ])
+GetStatusCmd.__doc__ = """\
+Bit set for the "Get Status" command.
+
+From LSB to MSB, the fields are:
+- RES: Reset/clear any latching/hard faults.
+- STOP: Stop an automated move-to command.
+- OSL: Override soft limits.
+- RU: Return coordinates in resolver units instead of angles.
+"""
+
+PanStatus = bitfield.make_bf(name='PanStatus', basetype=c_uint8,
+                                fields=[
+                                    ('PRF', c_bool, 1),
+                                    ('OL', c_bool, 1),
+                                    ('DE', c_bool, 1),
+                                    ('TO', c_bool, 1),
+                                    ('CCWHL', c_bool, 1),
+                                    ('CWHL', c_bool, 1),
+                                    ('CCWSL', c_bool, 1),
+                                    ('CWSL', c_bool, 1),
+                                ])
+PanStatus.__doc__= """\
+Pan status bit set.
+
+From LSB to MSB, the fields are:
+- PRF: Pan resolver fault.
+- OL: Current overload.
+- DE: Direction error.
+- TO: Move timeout.
+- CCWHL: Counter-clockwise hard limit reached.
+- CWHL: Clockwise hard limit reached.
+- CCWSL: Counter-clockwise soft limit reached.
+- CWSL: Clockwise soft limit reached.
+"""
+
+TiltStatus = bitfield.make_bf(name='TiltStatus', basetype=c_uint8,
+                                fields=[
+                                    ('TRF', c_bool, 1),
+                                    ('OL', c_bool, 1),
+                                    ('DE', c_bool, 1),
+                                    ('TO', c_bool, 1),
+                                    ('DHL', c_bool, 1),
+                                    ('UHL', c_bool, 1),
+                                    ('DSL', c_bool, 1),
+                                    ('USL', c_bool, 1),
+                                ])
+TiltStatus.__doc__= """\
+Tilt status bit set.
+
+From LSB to MSB, the fields are:
+- TRF: Tilt resolver fault.
+- OL: Current overload.
+- DE: Direction error.
+- TO: Move timeout.
+- DHL: Down hard limit reached.
+- UHL: Up hard limit reached.
+- DSL: Down soft limit reached.
+- USL: Up soft limit reached.
+"""

@@ -91,9 +91,30 @@ class QuicksetController(ABC):
         self._send(packet)
 
 
-    # def get_status(self):
-        # Status = self.send(30)
-        # return Status
+    def get_status(self):
+        """Get pan-tilt mount status.
+        
+        Returns:
+            status:
+                A StatusResponse tuple for the particular protocol being used.
+                See the StatusResponse documentation for the pan-tilt protocol
+                you are using for details.
+        """
+        CMD_NAME = 'get_status'
+        packet = self.protocol.assemble_packet(CMD_NAME)
+        self._send(packet)
+
+        rx = self._receive()
+        status = self.protocol.parse_packet(CMD_NAME, rx)
+
+        if status.gen_status.DES:
+            self._pan_destination = status.pan
+            self._tilt_destination = status.tilt
+        else:
+            self._pan = status.pan
+            self._tilt = status.tilt
+
+        return status
 
     @abstractmethod
     def _send(self, packet):
