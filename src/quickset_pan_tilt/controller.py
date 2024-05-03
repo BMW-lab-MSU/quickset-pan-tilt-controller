@@ -87,13 +87,25 @@ class QuicksetController(ABC):
         # self.protocol.parse_packet(rx)
 
     def fault_reset(self):
-        packet = self.protocol.assemble_packet('fault_reset')
+        """Clear any hard faults."""
+        CMD_NAME = 'fault_reset'
+
+        packet = self.protocol.assemble_packet(CMD_NAME)
         self._send(packet)
+
+        rx = self._receive()
+        status = self.protocol.parse_packet(CMD_NAME, rx)
+
+        # See if all the hard faults were cleared
+        hard_faults_exist = self.protocol.status_has_hard_faults(status.pan_status,
+                                                            status.tilt_status)
+        if hard_faults_exist:
+            warnings.warn("Hard fault was not successfully cleared.")
 
 
     def get_status(self):
         """Get pan-tilt mount status.
-        
+
         Returns:
             status:
                 A StatusResponse tuple for the particular protocol being used.

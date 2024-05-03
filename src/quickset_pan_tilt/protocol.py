@@ -205,7 +205,9 @@ class QuicksetProtocol(ABC):
             },
             'fault_reset': {
                 'assemble': self._assemble_fault_reset,
-                'parse': self._parse_fault_reset,
+                # The fault reset command is just a particular case of the
+                # "get status" command, so we can use the "get status" parser.
+                'parse': self._parse_get_status,
                 'number': 0x31,
             },
             'get_communication_timeout': {
@@ -221,6 +223,24 @@ class QuicksetProtocol(ABC):
         }
 
         self.COMMAND_NAMES = set(self._COMMANDS.keys())
+
+    def status_has_hard_faults(self, pan_status, tilt_status) -> bool:
+        """Check whether the pan and tilt status have hard faults.
+        
+        Args:
+            pan_status: PanStatus BitField
+            tilt_status: TiltStatus BitField
+
+        Returns:
+            hard_fault_exists: Whether or not a hard fault is present.
+        """
+        pan_hard_faults_exist = (pan_status.TO | pan_status.DE | pan_status.OL)
+        tilt_hard_faults_exist = (tilt_status.TO | tilt_status.DE | tilt_status.OL)
+
+        if pan_hard_faults_exist or tilt_hard_faults_exist:
+            return True
+        else:
+            return False
 
     def assemble_packet(self, cmd_name: str, *data) -> bytearray:
         """Assemble the communication packet for a command.
@@ -474,9 +494,6 @@ class QuicksetProtocol(ABC):
                               focus_jog))
 
         return data_bytes
-
-    def _parse_fault_reset(self):
-        pass
 
     def _assemble_get_communication_timeout(self) -> bytearray:
         """Assemble a packet to get the current value of the communication timeout.
