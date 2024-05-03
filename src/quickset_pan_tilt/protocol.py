@@ -451,23 +451,27 @@ class QuicksetProtocol(ABC):
         pass
 
     def _assemble_fault_reset(self) -> bytearray:
-        """Clear any hard faults.
+        """Assemble a packet to clear any hard faults.
 
         Possible hard faults are timeout, direction error, and current overload.
+
+        Returns:
+            packet: A "get status" packet with the reset bit set.
         """
         # Set the reset bit high
-        reset_cmd = (0b0000_0001).to_bytes()
+        status_cmd = GetStatusCmd()
+        status_cmd.RES = 1
 
         # Set all jog speeds to 0
-        pan_jog_cmd = (0).to_bytes()
-        tilt_jog_cmd = (0).to_bytes()
-        zoom_jog_cmd = (0).to_bytes()
-        focus_jog_cmd = (0).to_bytes()
+        pan_jog = 0
+        tilt_jog = 0
+        zoom_jog = 0
+        focus_jog = 0
 
         # Return a bytearray because we need to support mutable sequence
         # operations like extend and insert.
-        data_bytes = bytearray(reset_cmd + pan_jog_cmd + tilt_jog_cmd
-                               + zoom_jog_cmd + focus_jog_cmd)
+        data_bytes = bytearray((status_cmd.base, pan_jog, tilt_jog, zoom_jog, 
+                              focus_jog))
 
         return data_bytes
 
