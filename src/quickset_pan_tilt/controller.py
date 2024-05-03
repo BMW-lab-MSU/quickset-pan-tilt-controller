@@ -66,25 +66,40 @@ class QuicksetController(ABC):
                 f" Desired value: {timeout}, actual value: {actual_timeout}")
 
     def home(self):
-        packet = self.protocol.assemble_packet('home')
-        self._send(packet)
-
-        rx = self._receive()
-        # self.protocol.parse_packet(rx)
+        self._execute_move_command('home')
 
     def move_delta(self, pan, tilt):
-        packet = self.protocol.assemble_packet('move_delta', pan, tilt)
-        self._send(packet)
-
-        rx = self._receive()
-        # self.protocol.parse_packet(rx)
+        self._execute_move_command('move_delta', pan, tilt)
 
     def move_absolute(self, pan, tilt):
-        packet = self.protocol.assemble_packet('move_absolute', pan, tilt)
+        self._execute_move_command('move_absolute', pan, tilt)
+
+    def _execute_move_command(self, cmd, *args):
+        packet = self.protocol.assemble_packet(cmd, *args)
         self._send(packet)
 
+        # Check that the controller received and acknowledged the command
         rx = self._receive()
-        # self.protocol.parse_packet(rx)
+        while rx is None:
+            # Ack was not received... retry the command until it was Ack'd
+            self._send(packet)
+            rx = self._receive()
+
+        # Keep checking the status until the move is done
+        done = False
+        while not done:
+            # TODO: it would be more efficient to not reassemble the the
+            # "get status" packet every time, but for now I think calling
+            # the get_status function is a nice abstraction. Maybe we could
+            # hardcode the get_status packet if we really want this loop
+            # to be tighter and still use the get_status function directly,
+            # but then that makes the get_status packet assembly different
+            # from the other commands.
+            status = self.get_status()
+
+            if not status.gen_status.EXEC:
+                # EXEC bit is 0, so the move is done
+                done = True
 
     def fault_reset(self):
         """Clear any hard faults."""
