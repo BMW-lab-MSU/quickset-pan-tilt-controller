@@ -84,6 +84,20 @@ class QuicksetController(ABC):
             # Ack was not received... retry the command until it was Ack'd
             self._send(packet)
             rx = self._receive()
+        
+        # Parse the return status from the move command; this is primarily to
+        # get the destination coordinates from the pan-tilt mount.
+        status = self.protocol.parse_packet(cmd, rx)
+
+        # NOTE: The DES (destination) bit should always be set in the response
+        # following a "move to" command, but we check anyway. We could forgo
+        # this check.
+        if status.gen_status.DES:
+            self._pan_destination = status.pan
+            self._tilt_destination = status.tilt
+        else:
+            self._pan = status.pan
+            self._tilt = status.tilt
 
         # Keep checking the status until the move is done
         done = False

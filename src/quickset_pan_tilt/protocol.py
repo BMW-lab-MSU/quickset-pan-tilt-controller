@@ -187,12 +187,12 @@ class QuicksetProtocol(ABC):
             },
             'move_absolute': {
                 'assemble': self._assemble_move_to_entered,
-                'parse': self._parse_move_to_entered,
+                'parse': self._parse_get_status,
                 'number': 0x33,
             },
             'move_delta': {
                 'assemble': self._assemble_move_to_delta,
-                'parse': self._parse_move_to_delta,
+                'parse': self._parse_get_status,
                 'number': 0x34,
             },
             # The home/move to (0,0) command doesn't need any data, so we don't
@@ -200,7 +200,7 @@ class QuicksetProtocol(ABC):
             # function that doesn't nothing.
             'home': {
                 'assemble': lambda: None,
-                'parse': lambda: None,
+                'parse': self._parse_get_status,
                 'number': 0x35,
             },
             'fault_reset': {
@@ -465,7 +465,7 @@ class QuicksetProtocol(ABC):
 
         Args:
             status:
-                A StatusReponse namedtuple. The exact fields of the tuple
+                A StatusResponse namedtuple. The exact fields of the tuple
                 differ for different protocols.
             
         """
@@ -593,9 +593,6 @@ class QuicksetProtocol(ABC):
 
         return data_bytes
 
-    def _parse_move_to_entered(self):
-        pass
-
     def _assemble_move_to_delta(self,
                                 pan: float | None = None,
                                 tilt: float | None = None) -> bytearray:
@@ -639,9 +636,6 @@ class QuicksetProtocol(ABC):
         data_bytes = pan_bytes + tilt_bytes
 
         return data_bytes
-
-    def _parse_move_to_delta(self):
-        pass
 
 
 class PTCR20(QuicksetProtocol):
@@ -737,7 +731,7 @@ class PTCR20(QuicksetProtocol):
 
         Returns:
             status:
-                A StatusReponse namedtuple containing the following fields:
+                A StatusResponse namedtuple containing the following fields:
                 - pan: the pan coordinate
                 - tilt: the tilt coordinate
                 - pan_status: pan status bits
@@ -747,6 +741,9 @@ class PTCR20(QuicksetProtocol):
                 - focus: focus coordinate
                 - n_cameras: number of cameras
                 - camera_data: camera data; None if no cameras are attached
+
+                n_cameras and camera_data will be None when the status response
+                is from a "move to" command instead of a "get status" command.
         """
         
         pan = self.bytes_to_int(packet[0:2]) / self._ANGLE_MULTIPLIER
@@ -767,12 +764,26 @@ class PTCR20(QuicksetProtocol):
         zoom = packet[7]
         focus = packet[8]
 
-        n_cameras = packet[9]
+        # The response from a "move to" command doesn't contain any camera
+        # information, but the response from a "get status" command does. That
+        # is the only difference between the two responses. Rather than having
+        # different methods or needing to worry about passing the command name
+        # to this method, we just check the length of the packet to determine if
+        # the response is from a "move to" command (9 bytes) or a "get status"
+        # command (more than 9 bytes).
+        if len(packet) > 9:
+            # This packet is from a "get status" command, so we at least have a
+            # byte for the number of cameras.
+            n_cameras = packet[9]
 
-        # If a camera is present, the rest of the packet will be camera data
-        if len(packet) > 10:
-            camera_data = packet[10:]
+            # If any cameras are present, the rest of the packet will be camera data
+            if len(packet) > 10:
+                camera_data = packet[10:]
+            else:
+                camera_data = None
         else:
+            # This packet is from a "move to" command.
+            n_cameras = None
             camera_data = None
 
         return self.StatusResponse(pan, tilt, pan_status, tilt_status, gen_status,
