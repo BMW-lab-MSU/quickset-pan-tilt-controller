@@ -182,17 +182,17 @@ class QuicksetProtocol(ABC):
         self._COMMANDS = {
             'get_status': {
                 'assemble': self._assemble_get_status,
-                'parse': self._parse_get_status,
+                'parse': self._parse_status,
                 'number': 0x31,
             },
             'move_absolute': {
                 'assemble': self._assemble_move_to_entered,
-                'parse': self._parse_get_status,
+                'parse': self._parse_status,
                 'number': 0x33,
             },
             'move_delta': {
                 'assemble': self._assemble_move_to_delta,
-                'parse': self._parse_get_status,
+                'parse': self._parse_status,
                 'number': 0x34,
             },
             # The home/move to (0,0) command doesn't need any data, so we don't
@@ -200,14 +200,14 @@ class QuicksetProtocol(ABC):
             # function that doesn't nothing.
             'home': {
                 'assemble': lambda: None,
-                'parse': self._parse_get_status,
+                'parse': self._parse_status,
                 'number': 0x35,
             },
             'fault_reset': {
                 'assemble': self._assemble_fault_reset,
                 # The fault reset command is just a particular case of the
                 # "get status" command, so we can use the "get status" parser.
-                'parse': self._parse_get_status,
+                'parse': self._parse_status,
                 'number': 0x31,
             },
             'get_communication_timeout': {
@@ -460,7 +460,7 @@ class QuicksetProtocol(ABC):
         pass
 
     @abstractmethod
-    def _parse_get_status(self, status):
+    def _parse_status(self, status):
         """Parse the status packet returned by the pan-tilt.
 
         Args:
@@ -723,7 +723,7 @@ class PTCR20(QuicksetProtocol):
         return bytearray((cmd.base, pan_jog, tilt_jog, zoom_jog, focus_jog))
 
 
-    def _parse_get_status(self, packet: bytearray):
+    def _parse_status(self, packet: bytearray):
         """Parse a status response from the pan-tilt mount.
 
         Args:
@@ -810,7 +810,7 @@ class PTHR90(QuicksetProtocol):
     def _assemble_get_status(self):
         pass
 
-    def _parse_get_status(self):
+    def _parse_status(self):
         pass
 
 GetStatusCmd = bitfield.make_bf(name='GetStatusCmd', basetype=c_uint8,
