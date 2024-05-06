@@ -148,6 +148,8 @@ class QuicksetController(ABC):
         rx = self._receive()
         status = self.protocol.parse_packet(CMD_NAME, rx)
 
+        # NOTE: the destination bit will likely never be set in the response
+        # from a "get status" command, but we check anyway.
         if status.gen_status.DES:
             self._pan_destination = status.pan
             self._tilt_destination = status.tilt
