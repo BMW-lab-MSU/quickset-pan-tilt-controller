@@ -44,4 +44,12 @@ class TestProtocol(unittest.TestCase):
 
         self.assertEqual(expected, res)
 
+    def test_remove_escape_sequence3(self):
+        received = bytearray.fromhex('31f5011b950100004200000093')
+        expected = bytearray.fromhex('31f501150100004200000093')
+
+        res = QuicksetProtocol.remove_escape_sequences(received)
+
+        self.assertEqual(expected, res)
+
         

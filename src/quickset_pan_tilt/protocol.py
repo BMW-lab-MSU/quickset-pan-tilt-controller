@@ -166,7 +166,7 @@ class QuicksetProtocol(ABC):
 
                     # Clear the ESC flag so we don't think the next byte was
                     # preceded by an ESC character.
-                    found_sec = False
+                    found_esc = False
 
                 new_packet.append(byte)
 
@@ -385,7 +385,8 @@ class QuicksetProtocol(ABC):
         # an int, so we index into the byte array to return the underlying int.
         lrc = self.compute_lrc(local_packet)[0]
         if lrc != 0:
-            raise RuntimeError("LRC does not match. Packet was corrupted.")
+            raise RuntimeError("LRC does not match. Packet was corrupted."
+                               f" Received packet = {packet.hex()}")
 
         # We don't need the lrc packet anymore
         del local_packet[-1]
