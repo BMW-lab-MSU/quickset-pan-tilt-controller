@@ -5,6 +5,8 @@ from abc import ABC, abstractmethod
 
 from quickset_pan_tilt import protocol
 
+warnings.simplefilter('always')
+
 # TODO: we could probably just name this Controller instead of QuicksetController since quickset is the module name
 class QuicksetController(ABC):
     @abstractmethod
