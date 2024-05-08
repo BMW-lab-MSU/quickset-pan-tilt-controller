@@ -227,10 +227,10 @@ class ControllerSerial(QuicksetController):
     @abstractmethod
     def __init__(self, port, timeout=1, baud=9600):
         super().__init__()
-        self.serial = serial.Serial(port=port, timeout=timeout, baudrate=baud)
+        self._serial = serial.Serial(port=port, timeout=timeout, baudrate=baud)
 
     def _send(self, packet: bytearray):
-        self.serial.write(packet)
+        self._serial.write(packet)
         # TODO: should we make sure we actually sent something?
 
     def _receive(self) -> bytearray:
@@ -241,7 +241,7 @@ class ControllerSerial(QuicksetController):
         # Wait for ACK. If we never receive ACK, we should return and resend the command.
         # TODO: do we need to bother with looping a set number of times until we receive ACK?
         for i in range(ACK_WAIT_TIME):
-            recv_byte = self.serial.read(1)
+            recv_byte = self._serial.read(1)
             if len(recv_byte) == 0:
                 # The pan-tilt didn't return anything after the read timeout,
                 # so most likely nothing is in the buffer / being sent.
@@ -258,7 +258,7 @@ class ControllerSerial(QuicksetController):
 
         # Read bytes until we hit ETX
         while recv_byte != self.protocol.CONTROL_CHARS.ETX.to_bytes():
-            recv_byte = self.serial.read(1)
+            recv_byte = self._serial.read(1)
             rx.extend(recv_byte)
 
         return rx
