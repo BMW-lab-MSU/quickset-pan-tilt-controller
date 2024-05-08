@@ -88,16 +88,7 @@ class QuicksetController(ABC):
         # Parse the return status from the move command; this is primarily to
         # get the destination coordinates from the pan-tilt mount.
         status = self.protocol.parse_packet(cmd, rx)
-
-        # NOTE: The DES (destination) bit should always be set in the response
-        # following a "move to" command, but we check anyway. We could forgo
-        # this check.
-        if status.gen_status.DES:
-            self._pan_destination = status.pan
-            self._tilt_destination = status.tilt
-        else:
-            self._pan = status.pan
-            self._tilt = status.tilt
+        self._set_pan_tilt_coordinate_properties(status)
 
         # Keep checking the status until the move is done
         done = False
@@ -142,14 +133,31 @@ class QuicksetController(ABC):
                 you are using for details.
         """
         CMD_NAME = 'get_status'
+
         packet = self.protocol.assemble_packet(CMD_NAME)
         self._send(packet)
 
         rx = self._receive()
         status = self.protocol.parse_packet(CMD_NAME, rx)
 
-        # NOTE: the destination bit will likely never be set in the response
-        # from a "get status" command, but we check anyway.
+        self._set_pan_tilt_coordinate_properties(status)
+
+        return status
+
+    def _set_pan_tilt_coordinate_properties(self, status):
+        """Set the instance's pan and tilt coordinate properties.
+
+        The object's pan and tilt properties are just copies that can be accessed
+        without querying the pan-tilt mount.
+
+        Args:
+            status:
+                A StatusResponse tuple for the particular protocol being used.
+        """
+
+        # NOTE: The DES (destination) bit should always be set in the response
+        # following a "move to" command; the destination bit will likely never
+        # be set in the response from a "get status" command.
         if status.gen_status.DES:
             self._pan_destination = status.pan
             self._tilt_destination = status.tilt
