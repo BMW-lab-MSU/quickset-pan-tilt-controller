@@ -142,9 +142,11 @@ class QuicksetController(ABC):
 
         if hard_faults:
             warnings.warn("Hard faults were not successfully cleared.")
-            return False
+            were_faults_cleared = False
         else:
-            return True
+            were_faults_cleared = True
+        
+        return were_faults_cleared
 
 
     def get_status(self):
