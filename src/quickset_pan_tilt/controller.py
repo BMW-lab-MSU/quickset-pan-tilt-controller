@@ -65,16 +65,25 @@ class QuicksetController(ABC):
             warnings.warn("Communication timeout was not set successfully."
                 f" Desired value: {timeout}, actual value: {actual_timeout}")
 
-    def home(self):
-        self._execute_move_command('home')
+    def home(self) -> bool:
+        # TODO: is there a better name than "move_was_successful"? Maybe that name
+        # implies that the move was indeed successful, rather than being a bool that
+        # indicates whether the move was successful
+        move_was_successful = self._execute_move_command('home')
+        return move_was_successful
 
-    def move_delta(self, pan, tilt):
-        self._execute_move_command('move_delta', pan, tilt)
+    def move_delta(self, pan, tilt) -> bool:
+        move_was_successful = self._execute_move_command('move_delta', pan, tilt)
+        return move_was_successful
 
-    def move_absolute(self, pan, tilt):
-        self._execute_move_command('move_absolute', pan, tilt)
+    def move_absolute(self, pan, tilt) -> bool:
+        move_was_successful = self._execute_move_command('move_absolute', pan, tilt)
+        return move_was_successful
 
-    def _execute_move_command(self, cmd, *args):
+    def _execute_move_command(self, cmd, *args) -> bool:
+
+        move_was_successful = True
+
         packet = self.protocol.assemble_packet(cmd, *args)
         self._send(packet)
 
@@ -93,6 +102,12 @@ class QuicksetController(ABC):
         # Keep checking the status until the move is done
         done = False
         while not done:
+            hard_faults, soft_faults = self.check_for_faults(status)
+
+            if hard_faults or soft_faults:
+                move_was_successful = False
+                break
+
             # TODO: it would be more efficient to not reassemble the the
             # "get status" packet every time, but for now I think calling
             # the get_status function is a nice abstraction. Maybe we could
@@ -106,6 +121,8 @@ class QuicksetController(ABC):
                 # EXEC bit is 0, so the move is done
                 done = True
 
+        return move_was_successful
+
     def fault_reset(self):
         """Clear any hard faults."""
         CMD_NAME = 'fault_reset'
@@ -117,10 +134,10 @@ class QuicksetController(ABC):
         status = self.protocol.parse_packet(CMD_NAME, rx)
 
         # See if all the hard faults were cleared
-        hard_faults_exist = self.protocol.status_has_hard_faults(status.pan_status,
-                                                            status.tilt_status)
-        if hard_faults_exist:
-            warnings.warn("Hard fault was not successfully cleared.")
+        hard_faults, soft_faults = self.check_for_faults(status)
+
+        if hard_faults:
+            warnings.warn("Hard faults were not successfully cleared.")
 
 
     def get_status(self):
@@ -165,7 +182,29 @@ class QuicksetController(ABC):
             self._pan = status.pan
             self._tilt = status.tilt
 
-        return status
+
+    def check_for_faults(self, status):
+
+        hard_faults = self.protocol.check_for_hard_faults(
+            status.pan_status, status.tilt_status
+        )
+        
+        soft_faults = self.protocol.check_for_soft_faults(
+            status.pan_status, status.tilt_status
+        )
+
+        # Let the user know of any active faults by issuing a warning. This is
+        # for interactive usage. If a consumer wants to automatically do
+        # do something when a fault is active, they need to do something
+        # with the return values from this function.
+        for fault in hard_faults:
+            warnings.warn(f"{fault} fault is active.")
+
+        for fault in soft_faults:
+            warnings.warn(f"{fault} fault is active.")
+
+        return hard_faults, soft_faults 
+
 
     @abstractmethod
     def _send(self, packet):

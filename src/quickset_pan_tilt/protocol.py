@@ -224,23 +224,77 @@ class QuicksetProtocol(ABC):
 
         self.COMMAND_NAMES = set(self._COMMANDS.keys())
 
-    def status_has_hard_faults(self, pan_status, tilt_status) -> bool:
+    def check_for_hard_faults(self, pan_status, tilt_status) -> tuple:
         """Check whether the pan and tilt status have hard faults.
         
+        Possible hard faults for each axis are:
+        - timeout
+        - direction error
+        - current overload
+
         Args:
             pan_status: PanStatus BitField
             tilt_status: TiltStatus BitField
 
         Returns:
-            hard_fault_exists: Whether or not a hard fault is present.
+            active_faults:
+                Tuple of active hard faults. If no faults are active, then
+                the tuple will be empty.
         """
-        pan_hard_faults_exist = (pan_status.TO | pan_status.DE | pan_status.OL)
-        tilt_hard_faults_exist = (tilt_status.TO | tilt_status.DE | tilt_status.OL)
+        faults = {
+            'pan timeout': pan_status.TO,
+            'pan direction error': pan_status.DE,
+            'pan current overload': pan_status.OL,
+            'tilt timeout': tilt_status.TO,
+            'tilt direction error': tilt_status.DE,
+            'tilt current overload': tilt_status.OL,
+        }
 
-        if pan_hard_faults_exist or tilt_hard_faults_exist:
-            return True
-        else:
-            return False
+        # We use a tuple since it is immutable. The client shouldn't
+        # modify the list of active faults.
+        active_faults = tuple(
+            [fault_name for (fault,value) in faults.items() if value == 1]
+        )
+
+        return active_faults
+
+    def check_for_soft_faults(self, pan_status, tilt_status) -> tuple:
+        """Check whether the pan and tilt status have soft faults.
+
+        Possible soft faults for each axis are:
+        - hard limit reached
+        - soft limit reached
+        - resolver fault        
+
+        Args:
+            pan_status: PanStatus BitField
+            tilt_status: TiltStatus BitField
+
+        Returns:
+            active_faults:
+                Tuple of active soft faults. If no faults are active, then
+                the tuple will be empty.
+        """
+        faults = {
+            'clockwise hard limit': pan_status.CWHL,
+            'counter-clockwise hard limit': pan_status.CCWHL,
+            'clockwise soft limit': pan_status.CWSL,
+            'counter-clockwise soft limit': pan_status.CCWSL,
+            'up hard limit': tilt_status.UHL,
+            'down hard limit': tilt_status.DHL,
+            'up soft limit': tilt_status.USL,
+            'down soft limit': tilt_status.DSL,
+            'pan resolver': pan_status.PRF,
+            'tilt resolver': tilt_status.TRF,
+        }
+
+        # We use a tuple since it is immutable. The client shouldn't
+        # modify the list of active faults.
+        active_faults = tuple(
+            [fault_name for (fault,value) in faults.items() if value == 1]
+        )
+
+        return active_faults
 
     def assemble_packet(self, cmd_name: str, *data) -> bytearray:
         """Assemble the communication packet for a command.
