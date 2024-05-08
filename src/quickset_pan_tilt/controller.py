@@ -1,3 +1,9 @@
+"""Classes for controlling QuickSet pan tilt mounts.
+
+This module contains classes for controlling QuickSet pan tilt mounts. It
+implements the basic move commands and some other common commands. All the
+move commands are blocking---that is, they don't return until the move is done.
+"""
 import serial
 import time
 import warnings
@@ -5,6 +11,7 @@ from abc import ABC, abstractmethod
 
 from quickset_pan_tilt import protocol
 
+# Always print warnings every time they occur instead of only the first time.
 warnings.simplefilter('always')
 
 # TODO: we could probably just name this Controller instead of QuicksetController since quickset is the module name
@@ -21,8 +28,6 @@ class QuicksetController(ABC):
     def __init__(self):
         # These internal attributes should be accessed with the "public"
         # read-only properties defined by the associated @property decorators.
-        # TODO: maybe we should implement setters for pan and tilt that will
-        # call the move_absolute method under the hood.
         self._pan = None
         self._tilt = None
         self._pan_destination = None

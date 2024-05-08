@@ -1,3 +1,13 @@
+"""Classes for creating and parsing packets for QuickSet pan tilt mounts.
+
+This module provides classes for creating and parsing packets as defined by
+the QuickSet pan tilt mount communication protocol. There are multiple QuickSet
+communication protocols, but most of them are quite similar.
+
+The intent is that classes in this module are used by classes in the controller
+module; the controller defers all packet creation and parsing to a protocol
+object from this module.
+"""
 import bitfield
 import struct
 import warnings
@@ -8,9 +18,24 @@ from ctypes import c_bool, c_uint8
 
 ControlCharacters = namedtuple('ControlCharacters',
                                ('STX', 'ETX', 'ACK', 'NACK', 'ESC'))
+ControlCharacters.__doc__="""\
+QuickSet control characters tuple.
+
+Attributes:
+    STX: start byte
+    ETX: end byte
+    ACK: acknowledge
+    NACK: not acknowledge
+    ESC: escape byte
+"""
 
 # TODO: we could probably just name this Protocol instead of QuicksetProtocol since quickset is the module name
 class QuicksetProtocol(ABC):
+    """Abstract base class for QuickSet pan tilt protocols.
+    
+    Attributes:
+        COMMAND_NAMES: Set of available commands.
+    """
 
     CONTROL_CHARS = ControlCharacters(STX=0x02, ETX=0x03, ACK=0x06, NACK=0x15,
                                       ESC=0x1b)
@@ -173,7 +198,6 @@ class QuicksetProtocol(ABC):
         return new_packet
 
     def __init__(self):
-
         # NOTE: the PTHR90 and PTCR20 protocols use most of the same command
         # numbers. Most of the PTHR90 command numbers are the same in the PTCR20;
         # the main difference is that the PTCR20 defines additional commands.
@@ -225,7 +249,7 @@ class QuicksetProtocol(ABC):
         self.COMMAND_NAMES = set(self._COMMANDS.keys())
 
     def check_for_hard_faults(self, pan_status, tilt_status) -> tuple:
-        """Check whether the pan and tilt status have hard faults.
+        """Check whether the pan and tilt status bitsets have hard faults.
         
         Possible hard faults for each axis are:
         - timeout
@@ -259,7 +283,7 @@ class QuicksetProtocol(ABC):
         return active_faults
 
     def check_for_soft_faults(self, pan_status, tilt_status) -> tuple:
-        """Check whether the pan and tilt status have soft faults.
+        """Check whether the pan and tilt status bitsets have soft faults.
 
         Possible soft faults for each axis are:
         - hard limit reached
@@ -311,7 +335,7 @@ class QuicksetProtocol(ABC):
 
         Returns:
             packet:
-                The communication packet as a bytes object.
+                The communication packet as a bytearray.
         """
         packet = self._assemble_cmd_data_lrc(cmd_name, *data)
 
@@ -586,7 +610,7 @@ class QuicksetProtocol(ABC):
         return timeout
 
     def _assemble_set_communication_timeout(self, timeout: int) -> bytearray:
-        """Set the communication timeout.
+        """Assemble a packet to set the communication timeout.
 
         Args:
             timeout:
@@ -609,7 +633,10 @@ class QuicksetProtocol(ABC):
     def _assemble_move_to_entered(self,
                                   pan: float | None = None,
                                   tilt: float | None = None) -> bytearray:
-        """Move to entered coordinate.
+        """Assemble a packet to move to entered coordinates.
+
+        This implements the "move to entered" command in the protocol
+        datasheets.
 
         Args:
             pan:
@@ -650,9 +677,11 @@ class QuicksetProtocol(ABC):
     def _assemble_move_to_delta(self,
                                 pan: float | None = None,
                                 tilt: float | None = None) -> bytearray:
-        """Move to delta coordinates.
+        """Assemble a packet for the "move to delta" command.
 
-        Move specified pan and tilt angles away from the current coordinate.
+        This implements the "move to delta" command in the protocol datasheets,
+        which moves specified pan and tilt angles away from the current
+        coordinate.
 
         Args:
             pan:
@@ -693,6 +722,19 @@ class QuicksetProtocol(ABC):
 
 
 class PTCR20(QuicksetProtocol):
+    """Class for creating and parsing packets from the PTCR20 protocol.
+
+    Args:
+        identity:
+            The identity address of the pan tilt mount. Defaults to 0, which
+            is the broadcast address.
+    
+    Attributes:
+        identity:
+            The pan tilt mount's identity address.
+        COMMAND_NAMES:
+            Set of available commands.
+    """
 
     GenStatus = bitfield.make_bf(name='GenStatus', basetype=c_uint8,
                                  fields=[
@@ -845,6 +887,12 @@ class PTCR20(QuicksetProtocol):
 
 
 class PTHR90(QuicksetProtocol):
+    """Class for creating and parsing packets from the PTHR90 protocol.
+
+    Attributes:
+        COMMAND_NAMES:
+            Set of available commands.
+    """
 
     GenStatus = bitfield.make_bf(name='GenStatus', basetype=c_uint8,
                                     fields=[
@@ -861,6 +909,7 @@ class PTHR90(QuicksetProtocol):
     def __init__(self):
         super().__init__()
 
+    # TODO: implement and test these methods.
     def _assemble_get_status(self):
         pass
 
