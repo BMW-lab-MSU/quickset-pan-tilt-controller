@@ -68,23 +68,20 @@ class QuicksetController(ABC):
                 f" Desired value: {timeout}, actual value: {actual_timeout}")
 
     def home(self) -> bool:
-        # TODO: is there a better name than "move_was_successful"? Maybe that name
-        # implies that the move was indeed successful, rather than being a bool that
-        # indicates whether the move was successful
-        move_was_successful = self._execute_move_command('home')
-        return move_was_successful
+        was_move_successful = self._execute_move_command('home')
+        return was_move_successful
 
     def move_delta(self, pan, tilt) -> bool:
-        move_was_successful = self._execute_move_command('move_delta', pan, tilt)
-        return move_was_successful
+        was_move_successful = self._execute_move_command('move_delta', pan, tilt)
+        return was_move_successful
 
     def move_absolute(self, pan, tilt) -> bool:
-        move_was_successful = self._execute_move_command('move_absolute', pan, tilt)
-        return move_was_successful
+        was_move_successful = self._execute_move_command('move_absolute', pan, tilt)
+        return was_move_successful
 
     def _execute_move_command(self, cmd, *args) -> bool:
 
-        move_was_successful = False
+        was_move_successful = False
 
         packet = self.protocol.assemble_packet(cmd, *args)
         self._send(packet)
@@ -128,7 +125,7 @@ class QuicksetController(ABC):
                 done = True
                 move_was_successful = True
 
-        return move_was_successful
+        return was_move_successful
 
     def fault_reset(self) -> bool:
         """Clear any hard faults."""
