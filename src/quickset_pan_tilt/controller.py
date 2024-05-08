@@ -84,7 +84,7 @@ class QuicksetController(ABC):
 
     def _execute_move_command(self, cmd, *args) -> bool:
 
-        move_was_successful = True
+        move_was_successful = False
 
         packet = self.protocol.assemble_packet(cmd, *args)
         self._send(packet)
@@ -104,12 +104,6 @@ class QuicksetController(ABC):
         # Keep checking the status until the move is done
         done = False
         while not done:
-            hard_faults, soft_faults = self.check_for_faults(status)
-
-            if hard_faults or soft_faults:
-                move_was_successful = False
-                break
-
             # TODO: it would be more efficient to not reassemble the the
             # "get status" packet every time, but for now I think calling
             # the get_status function is a nice abstraction. Maybe we could
@@ -119,9 +113,20 @@ class QuicksetController(ABC):
             # from the other commands.
             status = self.get_status()
 
+            hard_faults, soft_faults = self.check_for_faults(status)
+
+            # The EXEC bit will be cleared when there is a hard fault, so we
+            # need to check for faults and break out of the loop before checking
+            # the EXEC bit to see if the move is done. Indeed, when a fault
+            # occurs, all motion will stop, so the move is done, but that does
+            # not indicate a *successful* move.
+            if hard_faults or soft_faults:
+                break
+
             if not status.gen_status.EXEC:
                 # EXEC bit is 0, so the move is done
                 done = True
+                move_was_successful = True
 
         return move_was_successful
 
