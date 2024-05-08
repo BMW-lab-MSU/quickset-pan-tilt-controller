@@ -253,7 +253,7 @@ class QuicksetProtocol(ABC):
         # We use a tuple since it is immutable. The client shouldn't
         # modify the list of active faults.
         active_faults = tuple(
-            [fault_name for (fault,value) in faults.items() if value == 1]
+            [fault for (fault,value) in faults.items() if value == 1]
         )
 
         return active_faults
@@ -291,7 +291,7 @@ class QuicksetProtocol(ABC):
         # We use a tuple since it is immutable. The client shouldn't
         # modify the list of active faults.
         active_faults = tuple(
-            [fault_name for (fault,value) in faults.items() if value == 1]
+            [fault for (fault,value) in faults.items() if value == 1]
         )
 
         return active_faults
