@@ -130,7 +130,7 @@ class QuicksetController(ABC):
 
         return move_was_successful
 
-    def fault_reset(self):
+    def fault_reset(self) -> bool:
         """Clear any hard faults."""
         CMD_NAME = 'fault_reset'
 
@@ -145,6 +145,11 @@ class QuicksetController(ABC):
 
         if hard_faults:
             warnings.warn("Hard faults were not successfully cleared.")
+
+        if hard_faults:
+            return False
+        else:
+            return True
 
 
     def get_status(self):
