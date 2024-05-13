@@ -317,6 +317,36 @@ class QuicksetController(ABC):
 
         return hard_faults, soft_faults 
 
+    def _wait_for_initialization(self):
+        """Request the controller's status until initialization is complete.
+
+        The controller takes a while to respond on power up; this is probably
+        just due to boot and initialization time of the controller's
+        microcontroller.
+        """
+
+        has_controller_responded = False
+
+        # We need to explicitly flush the stdout buffer because the default
+        # behavior is to flush after each newline character.
+        print("Waiting for controller to initialize", end='', flush=True)
+
+        while not has_controller_responded:
+            try:
+                status = self.get_status()
+            except TypeError:
+                # We expect a TypeError to be raised from protocol.parse_packet
+                # when the controller isn't responding; this is because the
+                # serial port read will timeout when the controller isn't
+                # responding, which results in the received packet being None.
+                print(".", end='', flush=True)
+                pass
+            else:
+                # Print a newline once initialization is done because the
+                # dots after "waiting for controller to initialize" don't have
+                # a newline at the end
+                print()
+                has_controller_responded = True
 
     @abstractmethod
     def _send(self, packet: bytearray):
@@ -357,7 +387,11 @@ class ControllerSerial(QuicksetController):
     """
     def __init__(self, protocol: protocol.QuicksetProtocol, port: str, timeout:int = 1, baud:int = 9600):
         super().__init__(protocol)
+
         self._serial = serial.Serial(port=port, timeout=timeout, baudrate=baud)
+
+        # The controller takes a while to respond after being powered on.
+        self._wait_for_initialization()
 
     def _send(self, packet: bytearray):
         self._serial.write(packet)
