@@ -31,7 +31,7 @@ class QuicksetController(ABC):
     """
     @abstractmethod
     def __init__(self, protocol: protocol.QuicksetProtocol):
-        self.protocol = protocol
+        self._protocol = protocol
 
         # These internal attributes should be accessed with the "public"
         # read-only properties defined by the associated @property decorators.
@@ -65,11 +65,11 @@ class QuicksetController(ABC):
         """
         CMD_NAME = 'get_communication_timeout'
 
-        packet = self.protocol.assemble_packet(CMD_NAME)
+        packet = self._protocol.assemble_packet(CMD_NAME)
         self._send(packet)
 
         rx = self._receive()
-        communication_timeout = self.protocol.parse_packet(CMD_NAME, rx)
+        communication_timeout = self._protocol.parse_packet(CMD_NAME, rx)
 
         return communication_timeout
 
@@ -83,13 +83,13 @@ class QuicksetController(ABC):
         CMD_NAME = 'set_communication_timeout'
 
         # Send the desired timeout to the pan-tilt controller
-        packet = self.protocol.assemble_packet(CMD_NAME, timeout)
+        packet = self._protocol.assemble_packet(CMD_NAME, timeout)
         self._send(packet)
 
         # Read back the response from the pan-tilt controller to make sure the
         # timeout was actually set.
         rx = self._receive()
-        actual_timeout = self.protocol.parse_packet(CMD_NAME, rx)
+        actual_timeout = self._protocol.parse_packet(CMD_NAME, rx)
 
         if timeout != actual_timeout:
             warnings.warn("Communication timeout was not set successfully."
@@ -159,7 +159,7 @@ class QuicksetController(ABC):
 
         was_move_successful = False
 
-        packet = self.protocol.assemble_packet(cmd, *args)
+        packet = self._protocol.assemble_packet(cmd, *args)
         self._send(packet)
 
         # Check that the controller received and acknowledged the command
@@ -171,7 +171,7 @@ class QuicksetController(ABC):
         
         # Parse the return status from the move command; this is primarily to
         # get the destination coordinates from the pan-tilt mount.
-        status = self.protocol.parse_packet(cmd, rx)
+        status = self._protocol.parse_packet(cmd, rx)
         self._set_pan_tilt_coordinate_properties(status)
 
         # Keep checking the status until the move is done
@@ -216,11 +216,11 @@ class QuicksetController(ABC):
         """
         CMD_NAME = 'fault_reset'
 
-        packet = self.protocol.assemble_packet(CMD_NAME)
+        packet = self._protocol.assemble_packet(CMD_NAME)
         self._send(packet)
 
         rx = self._receive()
-        status = self.protocol.parse_packet(CMD_NAME, rx)
+        status = self._protocol.parse_packet(CMD_NAME, rx)
 
         # See if all the hard faults were cleared
         hard_faults, soft_faults = self.check_for_faults(status)
@@ -245,11 +245,11 @@ class QuicksetController(ABC):
         """
         CMD_NAME = 'get_status'
 
-        packet = self.protocol.assemble_packet(CMD_NAME)
+        packet = self._protocol.assemble_packet(CMD_NAME)
         self._send(packet)
 
         rx = self._receive()
-        status = self.protocol.parse_packet(CMD_NAME, rx)
+        status = self._protocol.parse_packet(CMD_NAME, rx)
 
         self._set_pan_tilt_coordinate_properties(status)
 
@@ -297,11 +297,11 @@ class QuicksetController(ABC):
             UserWarning:
                 Raised for each fault that is active.
         """
-        hard_faults = self.protocol.check_for_hard_faults(
+        hard_faults = self._protocol.check_for_hard_faults(
             status.pan_status, status.tilt_status
         )
         
-        soft_faults = self.protocol.check_for_soft_faults(
+        soft_faults = self._protocol.check_for_soft_faults(
             status.pan_status, status.tilt_status
         )
 
@@ -377,7 +377,7 @@ class ControllerSerial(QuicksetController):
                 # so most likely nothing is in the buffer / being sent.
                 return None
 
-            elif recv_byte == self.protocol.CONTROL_CHARS.ACK.to_bytes():
+            elif recv_byte == self._protocol.CONTROL_CHARS.ACK.to_bytes():
                 rx.extend(recv_byte)
                 break;
 
@@ -387,7 +387,7 @@ class ControllerSerial(QuicksetController):
                 return None
 
         # Read bytes until we hit ETX
-        while recv_byte != self.protocol.CONTROL_CHARS.ETX.to_bytes():
+        while recv_byte != self._protocol.CONTROL_CHARS.ETX.to_bytes():
             recv_byte = self._serial.read(1)
             rx.extend(recv_byte)
 
