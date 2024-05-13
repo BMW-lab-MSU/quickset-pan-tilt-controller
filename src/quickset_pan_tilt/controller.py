@@ -23,17 +23,22 @@ class QuicksetController(ABC):
         tilt: The current tilt coordinate, in degrees.
         pan_destination: The last pan destination coordinate, in degrees.
         tilt_destination: The last tilt destination coordinate, in degrees.
+
+    Args:
+        protocol:
+            A QuicksetProtocol instance. This instance must be the correct
+            protocol type for the pan tilt mount being used.
     """
     @abstractmethod
-    def __init__(self):
+    def __init__(self, protocol: protocol.QuicksetProtocol):
+        self.protocol = protocol
+
         # These internal attributes should be accessed with the "public"
         # read-only properties defined by the associated @property decorators.
         self._pan = None
         self._tilt = None
         self._pan_destination = None
         self._tilt_destination = None
-
-        self.protocol = None
 
     @property
     def pan(self):
@@ -334,20 +339,24 @@ class QuicksetController(ABC):
         pass
 
 class ControllerSerial(QuicksetController):
-    """Abstract class for QuickSet controllers controlled via serial ports.
+    """Class for QuickSet controllers controlled via serial ports.
     
     This class will work with pan tilt mounts that are configured to use RS-232
-    or RS-422 for serial communication. This class must be subclassed; the
-    subclass sets the specific protocol that the pan tilt mount uses.
+    or RS-422 for serial communication.
 
     Args:
-        port: The serial port to use, e.g., /dev/ttyUSB0 or COM4
-        timeout: The serial port's read timeout, in seconds. Defaults to 1.
-        baud: The serial port's baud rate. Defaults to 9600.
+        protocol:
+            A QuicksetProtocol instance. This instance must be the correct
+            protocol type for the pan tilt mount being used.
+        port:
+            The serial port to use, e.g., /dev/ttyUSB0 or COM4
+        timeout:
+            The serial port's read timeout, in seconds. Defaults to 1.
+        baud:
+            The serial port's baud rate. Defaults to 9600.
     """
-    @abstractmethod
-    def __init__(self, port: str, timeout:int = 1, baud:int = 9600):
-        super().__init__()
+    def __init__(self, protocol: protocol.QuicksetProtocol, port: str, timeout:int = 1, baud:int = 9600):
+        super().__init__(protocol)
         self._serial = serial.Serial(port=port, timeout=timeout, baudrate=baud)
 
     def _send(self, packet: bytearray):
@@ -383,21 +392,3 @@ class ControllerSerial(QuicksetController):
             rx.extend(recv_byte)
 
         return rx
-
-# TODO: should we create a separate class like this, or just pass in a protocol object?
-# Maybe it is cleaner to pass in a protocol object. We would pass in the protocol object
-# to the base class constructor.
-class PTCR20Serial(ControllerSerial):
-    """Controller for the mounts using the PTCR20 protocol over serial.
-
-    This class can control pan tilt mounts that use the PTCR20 protocol, such
-    as the QPT20 7-23HSB or QPT 20 7-22HSB.
-
-    Args:
-        port: The serial port to use, e.g., /dev/ttyUSB0 or COM4
-        timeout: The serial port's read timeout, in seconds. Defaults to 1.
-        baud: The serial port's baud rate. Defaults to 9600.
-    """
-    def __init__(self, port, timeout=1, baud=9600):
-        super().__init__(port, timeout, baud)
-        self.protocol = protocol.PTCR20()
