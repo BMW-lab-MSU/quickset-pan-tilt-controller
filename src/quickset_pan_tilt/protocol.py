@@ -443,7 +443,7 @@ class QuicksetProtocol(ABC):
             packet_valid = True
         else:
             packet_valid = False
-            raise RuntimeError("Packet is invalid")
+            raise RuntimeError("Packet does not contain an ACK or ETX byte")
 
         # Remove the ack and etx bytes so we don't have to worry about them
         # down the line when computing the LRC or parsing the data bytes.
