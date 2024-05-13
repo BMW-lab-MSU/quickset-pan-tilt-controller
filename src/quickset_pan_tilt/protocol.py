@@ -418,8 +418,14 @@ class QuicksetProtocol(ABC):
                 A RuntimeException is raised if the packet is invalid, the packet
                 is corrupted (i.e., the LRC doesn't match), or if the received
                 packet does not match the command defined by `cmd_name`.
+            TypeError:
+                A TypeError is raised when the input packet is not a bytearray
+                or bytes object.
         """
         # TODO: what do we do if we receive a NACK?
+
+        if not isinstance(packet, (bytearray, bytes)):
+            raise TypeError("Packet must be a bytearray or bytes object.")
 
         # Create a local copy of the packet because we don't want to modify the
         # original packet; the calling function would likely be surprised that
