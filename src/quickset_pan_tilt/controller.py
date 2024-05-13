@@ -194,7 +194,7 @@ class QuicksetController(ABC):
             if not status.gen_status.EXEC:
                 # EXEC bit is 0, so the move is done
                 done = True
-                move_was_successful = True
+                was_move_successful = True
 
         return was_move_successful
 
