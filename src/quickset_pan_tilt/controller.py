@@ -3,6 +3,17 @@
 This module contains classes for controlling QuickSet pan tilt mounts. It
 implements the basic move commands and some other common commands. All the
 move commands are blocking---that is, they don't return until the move is done.
+
+Typical usage:
+    import from quickset_pan_tilt import controller, protocol
+
+    # Create the pan tilt controller object. The first argument is the protocol
+    # object that your particular pan tilt mount uses (check the pan tilt mount
+    # datasheet to determine this).
+    pan_tilt = controller.ControllerSerial(protocol.PTCR20(), 'COM4')
+
+    # Move the pan tilt mount as desired.
+    pan_tilt.move_absolute(-50, 13.5)
 """
 import serial
 import time
