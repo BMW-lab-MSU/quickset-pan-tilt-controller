@@ -177,13 +177,6 @@ class QuicksetController(ABC):
         # Keep checking the status until the move is done
         done = False
         while not done:
-            # TODO: it would be more efficient to not reassemble the the
-            # "get status" packet every time, but for now I think calling
-            # the get_status function is a nice abstraction. Maybe we could
-            # hardcode the get_status packet if we really want this loop
-            # to be tighter and still use the get_status function directly,
-            # but then that makes the get_status packet assembly different
-            # from the other commands.
             status = self.get_status()
 
             hard_faults, soft_faults = self.check_for_faults(status)
