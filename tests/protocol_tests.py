@@ -2,6 +2,7 @@ import unittest
 
 from quickset_pan_tilt.protocol import *
 
+
 class TestProtocol(unittest.TestCase):
 
     def test_insert_escape_sequence1(self):
@@ -27,7 +28,7 @@ class TestProtocol(unittest.TestCase):
         escaped = QuicksetProtocol.escape_control_chars(to_send)
 
         self.assertEqual(expected, escaped)
-    
+
     def test_remove_escape_sequence(self):
         received = bytes.fromhex("1b9b")
         expected = bytes.fromhex("1b")
@@ -45,11 +46,9 @@ class TestProtocol(unittest.TestCase):
         self.assertEqual(expected, res)
 
     def test_remove_escape_sequence3(self):
-        received = bytearray.fromhex('31f5011b950100004200000093')
-        expected = bytearray.fromhex('31f501150100004200000093')
+        received = bytearray.fromhex("31f5011b950100004200000093")
+        expected = bytearray.fromhex("31f501150100004200000093")
 
         res = QuicksetProtocol.remove_escape_sequences(received)
 
         self.assertEqual(expected, res)
-
-        

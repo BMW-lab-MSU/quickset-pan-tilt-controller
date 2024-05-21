@@ -15,6 +15,7 @@ Typical usage:
     # Move the pan tilt mount as desired.
     pan_tilt.move_absolute(-50, 13.5)
 """
+
 import serial
 import time
 import warnings
@@ -23,12 +24,13 @@ from abc import ABC, abstractmethod
 from quickset_pan_tilt import protocol
 
 # Always print warnings every time they occur instead of only the first time.
-warnings.simplefilter('always')
+warnings.simplefilter("always")
+
 
 # TODO: we could probably just name this Controller instead of QuicksetController since quickset is the module name
 class QuicksetController(ABC):
     """Abstract base class for QuickSet pan tilt mount controllers.
-    
+
     Attributes:
         pan: The current pan coordinate, in degrees.
         tilt: The current tilt coordinate, in degrees.
@@ -40,6 +42,7 @@ class QuicksetController(ABC):
             A QuicksetProtocol instance. This instance must be the correct
             protocol type for the pan tilt mount being used.
     """
+
     @abstractmethod
     def __init__(self, protocol: protocol.QuicksetProtocol):
         self._protocol = protocol
@@ -74,7 +77,7 @@ class QuicksetController(ABC):
         Returns:
             communication_timeout: The timeout value, in seconds.
         """
-        CMD_NAME = 'get_communication_timeout'
+        CMD_NAME = "get_communication_timeout"
 
         packet = self._protocol.assemble_packet(CMD_NAME)
         self._send(packet)
@@ -87,11 +90,11 @@ class QuicksetController(ABC):
     @communication_timeout.setter
     def communication_timeout(self, timeout: int):
         """Set the pan tilt mount's communication timeout.
-        
+
         Args:
             timeout: The desired timeout value, in seconds.
         """
-        CMD_NAME = 'set_communication_timeout'
+        CMD_NAME = "set_communication_timeout"
 
         # Send the desired timeout to the pan-tilt controller
         packet = self._protocol.assemble_packet(CMD_NAME, timeout)
@@ -103,17 +106,19 @@ class QuicksetController(ABC):
         actual_timeout = self._protocol.parse_packet(CMD_NAME, rx)
 
         if timeout != actual_timeout:
-            warnings.warn("Communication timeout was not set successfully."
-                f" Desired value: {timeout}, actual value: {actual_timeout}")
+            warnings.warn(
+                "Communication timeout was not set successfully."
+                f" Desired value: {timeout}, actual value: {actual_timeout}"
+            )
 
     def home(self) -> bool:
         """Move to (0,0).
-        
+
         Returns:
             was_move_successful:
                 Boolean indicating whether or not the move was successful
         """
-        was_move_successful = self._execute_move_command('home')
+        was_move_successful = self._execute_move_command("home")
         return was_move_successful
 
     def move_delta(self, pan, tilt) -> bool:
@@ -123,13 +128,13 @@ class QuicksetController(ABC):
             pan:
                 The pan increment, in degrees.
             tilt:
-                The tilt increment, in degrees. 
+                The tilt increment, in degrees.
 
         Returns:
             was_move_successful:
                 Boolean indicating whether or not the move was successful
         """
-        was_move_successful = self._execute_move_command('move_delta', pan, tilt)
+        was_move_successful = self._execute_move_command("move_delta", pan, tilt)
         return was_move_successful
 
     def move_absolute(self, pan, tilt) -> bool:
@@ -139,13 +144,13 @@ class QuicksetController(ABC):
             pan:
                 The destination pan coordinate, in degrees.
             tilt:
-                The destination tilt coordinate, in degrees. 
+                The destination tilt coordinate, in degrees.
 
         Returns:
             was_move_successful:
                 Boolean indicating whether or not the move was successful
         """
-        was_move_successful = self._execute_move_command('move_absolute', pan, tilt)
+        was_move_successful = self._execute_move_command("move_absolute", pan, tilt)
         return was_move_successful
 
     def _execute_move_command(self, cmd: str, *args) -> bool:
@@ -179,7 +184,7 @@ class QuicksetController(ABC):
             # Ack was not received... retry the command until it was Ack'd
             self._send(packet)
             rx = self._receive()
-        
+
         # Parse the return status from the move command; this is primarily to
         # get the destination coordinates from the pan-tilt mount.
         status = self._protocol.parse_packet(cmd, rx)
@@ -209,7 +214,7 @@ class QuicksetController(ABC):
 
     def fault_reset(self) -> bool:
         """Clear any hard faults.
-        
+
         Returns:
             were_faults_cleared:
                 A boolean indicating whether the hard faults were cleared.
@@ -218,7 +223,7 @@ class QuicksetController(ABC):
             UserWarning:
                 Raised if the hard faults were not successfully cleared.
         """
-        CMD_NAME = 'fault_reset'
+        CMD_NAME = "fault_reset"
 
         packet = self._protocol.assemble_packet(CMD_NAME)
         self._send(packet)
@@ -234,9 +239,8 @@ class QuicksetController(ABC):
             were_faults_cleared = False
         else:
             were_faults_cleared = True
-        
-        return were_faults_cleared
 
+        return were_faults_cleared
 
     def get_status(self):
         """Get the pan-tilt mount's status.
@@ -247,7 +251,7 @@ class QuicksetController(ABC):
                 See the StatusResponse documentation for the pan-tilt protocol
                 you are using for details.
         """
-        CMD_NAME = 'get_status'
+        CMD_NAME = "get_status"
 
         packet = self._protocol.assemble_packet(CMD_NAME)
         self._send(packet)
@@ -280,23 +284,22 @@ class QuicksetController(ABC):
             self._pan = status.pan
             self._tilt = status.tilt
 
-
     def check_for_faults(self, status) -> tuple:
         """Check for hard and soft faults.
 
         Given a StatusResponse, as returned by get_status(), this method
         checks if the pan tilt mount has any active faults.
- 
+
         Args:
             status:
-                A StatusResponse tuple that was returned from get_status(). 
-        
+                A StatusResponse tuple that was returned from get_status().
+
         Returns:
             hard_faults:
                 A tuple of the active hard faults.
             soft_faults:
                 A tuple of the active soft faults.
-        
+
         Warnings:
             UserWarning:
                 Raised for each fault that is active.
@@ -304,7 +307,7 @@ class QuicksetController(ABC):
         hard_faults = self._protocol.check_for_hard_faults(
             status.pan_status, status.tilt_status
         )
-        
+
         soft_faults = self._protocol.check_for_soft_faults(
             status.pan_status, status.tilt_status
         )
@@ -319,7 +322,7 @@ class QuicksetController(ABC):
         for fault in soft_faults:
             warnings.warn(f"{fault} fault is active.")
 
-        return hard_faults, soft_faults 
+        return hard_faults, soft_faults
 
     def _wait_for_initialization(self):
         """Request the controller's status until initialization is complete.
@@ -333,7 +336,7 @@ class QuicksetController(ABC):
 
         # We need to explicitly flush the stdout buffer because the default
         # behavior is to flush after each newline character.
-        print("Waiting for controller to initialize", end='', flush=True)
+        print("Waiting for controller to initialize", end="", flush=True)
 
         while not has_controller_responded:
             try:
@@ -343,7 +346,7 @@ class QuicksetController(ABC):
                 # when the controller isn't responding; this is because the
                 # serial port read will timeout when the controller isn't
                 # responding, which results in the received packet being None.
-                print(".", end='', flush=True)
+                print(".", end="", flush=True)
                 pass
             else:
                 # Print a newline once initialization is done because the
@@ -355,7 +358,7 @@ class QuicksetController(ABC):
     @abstractmethod
     def _send(self, packet: bytearray):
         """Send a command to the pan tilt mount.
-        
+
         Args:
             packet:
                 The command bytes to send.
@@ -365,16 +368,17 @@ class QuicksetController(ABC):
     @abstractmethod
     def _receive(self) -> bytearray:
         """Receive a response from the pan tilt mount.
-        
+
         Returns:
             packet:
-                The received packet from the pan tilt mount. 
+                The received packet from the pan tilt mount.
         """
         pass
 
+
 class ControllerSerial(QuicksetController):
     """Class for QuickSet controllers controlled via serial ports.
-    
+
     This class will work with pan tilt mounts that are configured to use RS-232
     or RS-422 for serial communication.
 
@@ -389,7 +393,14 @@ class ControllerSerial(QuicksetController):
         baud:
             The serial port's baud rate. Defaults to 9600.
     """
-    def __init__(self, protocol: protocol.QuicksetProtocol, port: str, timeout:int = 1, baud:int = 9600):
+
+    def __init__(
+        self,
+        protocol: protocol.QuicksetProtocol,
+        port: str,
+        timeout: int = 1,
+        baud: int = 9600,
+    ):
         super().__init__(protocol)
 
         self._serial = serial.Serial(port=port, timeout=timeout, baudrate=baud)
@@ -417,7 +428,7 @@ class ControllerSerial(QuicksetController):
 
             elif recv_byte == self._protocol.CONTROL_CHARS.ACK.to_bytes():
                 rx.extend(recv_byte)
-                break;
+                break
 
             elif i == (ACK_WAIT_TIME - 1):
                 # We didn't receive an ACK character yet, so we're assuming

@@ -8,6 +8,7 @@ The intent is that classes in this module are used by classes in the controller
 module; the controller defers all packet creation and parsing to a protocol
 object from this module.
 """
+
 import bitfield
 import struct
 import warnings
@@ -16,9 +17,10 @@ from abc import ABC, abstractmethod
 from collections import namedtuple
 from ctypes import c_bool, c_uint8
 
-ControlCharacters = namedtuple('ControlCharacters',
-                               ('STX', 'ETX', 'ACK', 'NACK', 'ESC'))
-ControlCharacters.__doc__="""\
+ControlCharacters = namedtuple(
+    "ControlCharacters", ("STX", "ETX", "ACK", "NACK", "ESC")
+)
+ControlCharacters.__doc__ = """\
 QuickSet control characters tuple.
 
 Attributes:
@@ -29,16 +31,16 @@ Attributes:
     ESC: escape byte
 """
 
+
 # TODO: we could probably just name this Protocol instead of QuicksetProtocol since quickset is the module name
 class QuicksetProtocol(ABC):
     """Abstract base class for QuickSet pan tilt protocols.
-    
+
     Attributes:
         COMMAND_NAMES: Set of available commands.
     """
 
-    CONTROL_CHARS = ControlCharacters(STX=0x02, ETX=0x03, ACK=0x06, NACK=0x15,
-                                      ESC=0x1b)
+    CONTROL_CHARS = ControlCharacters(STX=0x02, ETX=0x03, ACK=0x06, NACK=0x15, ESC=0x1B)
 
     # The pan/tilt angle resolution in 0.1 degrees, but the pan/tilt angles are
     # specified as integers, so the actual angles are multiplied by 10.
@@ -57,7 +59,7 @@ class QuicksetProtocol(ABC):
         Returns:
             bytes: The converted little-endian bytes array.
         """
-        int_bytes = integer.to_bytes(length=2, byteorder='little', signed=True)
+        int_bytes = integer.to_bytes(length=2, byteorder="little", signed=True)
 
         # Return a bytearray because it is mutable. We need to be able to
         # modify the byte array later on, particularly if we need to insert
@@ -77,7 +79,7 @@ class QuicksetProtocol(ABC):
         # Unpack the little-endian bytes as a signed two's complement integer.
         # '<' is for little-endian, and 'h' is for 'short'
         # (i.e., a signed two-byte integer).
-        unpacked = struct.unpack('<h', two_bytes)
+        unpacked = struct.unpack("<h", two_bytes)
 
         # struct.unpack always returns a tuple, but we want to have an int,
         # so we index into the tuple.
@@ -136,8 +138,7 @@ class QuicksetProtocol(ABC):
 
         for byte in packet:
             if byte in QuicksetProtocol.CONTROL_CHARS:
-                new_packet.extend(
-                    QuicksetProtocol.insert_escape_sequence(byte))
+                new_packet.extend(QuicksetProtocol.insert_escape_sequence(byte))
             else:
                 new_packet.append(byte)
 
@@ -204,45 +205,45 @@ class QuicksetProtocol(ABC):
         # Thus we put the common commands into the base class and can add any
         # additional unique commands to the subclasses.
         self._COMMANDS = {
-            'get_status': {
-                'assemble': self._assemble_get_status,
-                'parse': self._parse_status,
-                'number': 0x31,
+            "get_status": {
+                "assemble": self._assemble_get_status,
+                "parse": self._parse_status,
+                "number": 0x31,
             },
-            'move_absolute': {
-                'assemble': self._assemble_move_to_entered,
-                'parse': self._parse_status,
-                'number': 0x33,
+            "move_absolute": {
+                "assemble": self._assemble_move_to_entered,
+                "parse": self._parse_status,
+                "number": 0x33,
             },
-            'move_delta': {
-                'assemble': self._assemble_move_to_delta,
-                'parse': self._parse_status,
-                'number': 0x34,
+            "move_delta": {
+                "assemble": self._assemble_move_to_delta,
+                "parse": self._parse_status,
+                "number": 0x34,
             },
             # The home/move to (0,0) command doesn't need any data, so we don't
             # need a method to prepare the data, hence why we use an anonymous
             # function that doesn't nothing.
-            'home': {
-                'assemble': lambda: None,
-                'parse': self._parse_status,
-                'number': 0x35,
+            "home": {
+                "assemble": lambda: None,
+                "parse": self._parse_status,
+                "number": 0x35,
             },
-            'fault_reset': {
-                'assemble': self._assemble_fault_reset,
+            "fault_reset": {
+                "assemble": self._assemble_fault_reset,
                 # The fault reset command is just a particular case of the
                 # "get status" command, so we can use the "get status" parser.
-                'parse': self._parse_status,
-                'number': 0x31,
+                "parse": self._parse_status,
+                "number": 0x31,
             },
-            'get_communication_timeout': {
-                'assemble': self._assemble_get_communication_timeout,
-                'parse': self._parse_communication_timeout,
-                'number': 0x96,
+            "get_communication_timeout": {
+                "assemble": self._assemble_get_communication_timeout,
+                "parse": self._parse_communication_timeout,
+                "number": 0x96,
             },
-            'set_communication_timeout': {
-                'assemble': self._assemble_set_communication_timeout,
-                'parse': self._parse_communication_timeout,
-                'number': 0x96,
+            "set_communication_timeout": {
+                "assemble": self._assemble_set_communication_timeout,
+                "parse": self._parse_communication_timeout,
+                "number": 0x96,
             },
         }
 
@@ -250,7 +251,7 @@ class QuicksetProtocol(ABC):
 
     def check_for_hard_faults(self, pan_status, tilt_status) -> tuple:
         """Check whether the pan and tilt status bitsets have hard faults.
-        
+
         Possible hard faults for each axis are:
         - timeout
         - direction error
@@ -266,18 +267,18 @@ class QuicksetProtocol(ABC):
                 the tuple will be empty.
         """
         faults = {
-            'pan timeout': pan_status.TO,
-            'pan direction error': pan_status.DE,
-            'pan current overload': pan_status.OL,
-            'tilt timeout': tilt_status.TO,
-            'tilt direction error': tilt_status.DE,
-            'tilt current overload': tilt_status.OL,
+            "pan timeout": pan_status.TO,
+            "pan direction error": pan_status.DE,
+            "pan current overload": pan_status.OL,
+            "tilt timeout": tilt_status.TO,
+            "tilt direction error": tilt_status.DE,
+            "tilt current overload": tilt_status.OL,
         }
 
         # We use a tuple since it is immutable. The client shouldn't
         # modify the list of active faults.
         active_faults = tuple(
-            [fault for (fault,value) in faults.items() if value == 1]
+            [fault for (fault, value) in faults.items() if value == 1]
         )
 
         return active_faults
@@ -288,7 +289,7 @@ class QuicksetProtocol(ABC):
         Possible soft faults for each axis are:
         - hard limit reached
         - soft limit reached
-        - resolver fault        
+        - resolver fault
 
         Args:
             pan_status: PanStatus BitField
@@ -300,22 +301,22 @@ class QuicksetProtocol(ABC):
                 the tuple will be empty.
         """
         faults = {
-            'clockwise hard limit': pan_status.CWHL,
-            'counter-clockwise hard limit': pan_status.CCWHL,
-            'clockwise soft limit': pan_status.CWSL,
-            'counter-clockwise soft limit': pan_status.CCWSL,
-            'up hard limit': tilt_status.UHL,
-            'down hard limit': tilt_status.DHL,
-            'up soft limit': tilt_status.USL,
-            'down soft limit': tilt_status.DSL,
-            'pan resolver': pan_status.PRF,
-            'tilt resolver': tilt_status.TRF,
+            "clockwise hard limit": pan_status.CWHL,
+            "counter-clockwise hard limit": pan_status.CCWHL,
+            "clockwise soft limit": pan_status.CWSL,
+            "counter-clockwise soft limit": pan_status.CCWSL,
+            "up hard limit": tilt_status.UHL,
+            "down hard limit": tilt_status.DHL,
+            "up soft limit": tilt_status.USL,
+            "down soft limit": tilt_status.DSL,
+            "pan resolver": pan_status.PRF,
+            "tilt resolver": tilt_status.TRF,
         }
 
         # We use a tuple since it is immutable. The client shouldn't
         # modify the list of active faults.
         active_faults = tuple(
-            [fault for (fault,value) in faults.items() if value == 1]
+            [fault for (fault, value) in faults.items() if value == 1]
         )
 
         return active_faults
@@ -374,15 +375,14 @@ class QuicksetProtocol(ABC):
         """
 
         if cmd_name not in self.COMMAND_NAMES:
-            raise NotImplementedError(
-                f'Command "{cmd_name}" is not implemented.')
+            raise NotImplementedError(f'Command "{cmd_name}" is not implemented.')
 
         # cmd_bytes needs to be a bytearray so we can support mutable sequence
         # operations like extend and insert.
-        cmd_bytes = bytearray(self._COMMANDS[cmd_name]['number'].to_bytes())
+        cmd_bytes = bytearray(self._COMMANDS[cmd_name]["number"].to_bytes())
 
         # Call the command-specific function to prepare the data bytes.
-        data_bytes = self._COMMANDS[cmd_name]['assemble'](*data)
+        data_bytes = self._COMMANDS[cmd_name]["assemble"](*data)
 
         # Some commands don't require any data bytes; thus data_bytes will be
         # empty and should not be included in the command packet.
@@ -469,8 +469,10 @@ class QuicksetProtocol(ABC):
         # an int, so we index into the byte array to return the underlying int.
         lrc = self.compute_lrc(local_packet)[0]
         if lrc != 0:
-            raise RuntimeError("LRC does not match. Packet was corrupted."
-                               f" Received packet = {packet.hex()}")
+            raise RuntimeError(
+                "LRC does not match. Packet was corrupted."
+                f" Received packet = {packet.hex()}"
+            )
 
         # We don't need the lrc packet anymore
         del local_packet[-1]
@@ -479,16 +481,18 @@ class QuicksetProtocol(ABC):
         # are expecting. If this is not the case, that most likely means the
         # caller passed the wrong command name to us.
         cmd_number = local_packet[0]
-        expected_cmd_number = self._COMMANDS[cmd_name]['number']
+        expected_cmd_number = self._COMMANDS[cmd_name]["number"]
         if expected_cmd_number != cmd_number:
-            raise RuntimeError(f"Received command number {cmd_number} does"
-                               " not mach expected command number {expected_cmd_number}.")
+            raise RuntimeError(
+                f"Received command number {cmd_number} does"
+                " not mach expected command number {expected_cmd_number}."
+            )
 
         # We don't need the command packet anymore
         del local_packet[0]
 
         # Packet is good so far, so now we can actually handle parsing the data.
-        data = self._COMMANDS[cmd_name]['parse'](local_packet)
+        data = self._COMMANDS[cmd_name]["parse"](local_packet)
 
         # The data tuple can vary depending on the command, so the caller must
         # know how to parse the data appropriately. We simply return the tuple.
@@ -551,7 +555,6 @@ class QuicksetProtocol(ABC):
             status:
                 A StatusResponse namedtuple. The exact fields of the tuple
                 differ for different protocols.
-            
         """
         pass
 
@@ -575,8 +578,9 @@ class QuicksetProtocol(ABC):
 
         # Return a bytearray because we need to support mutable sequence
         # operations like extend and insert.
-        data_bytes = bytearray((status_cmd.base, pan_jog, tilt_jog, zoom_jog, 
-                              focus_jog))
+        data_bytes = bytearray(
+            (status_cmd.base, pan_jog, tilt_jog, zoom_jog, focus_jog)
+        )
 
         return data_bytes
 
@@ -605,9 +609,11 @@ class QuicksetProtocol(ABC):
             timeout: The pan-tilt controller's communication timeout, in seconds.
         """
         if len(packet) > 1:
-            raise RuntimeError("Packet is too long."
-                               " It should only have one byte, but it has"
-                               f" {len(packet)} bytes.")
+            raise RuntimeError(
+                "Packet is too long."
+                " It should only have one byte, but it has"
+                f" {len(packet)} bytes."
+            )
 
         # The timeout value is in bits 6--0 of the data packet, so we mask
         # those bits.
@@ -628,17 +634,19 @@ class QuicksetProtocol(ABC):
                 The timeout command byte to send to the pan-tilt controller.
         """
         if timeout > 120 or timeout < 0:
-            warnings.warn("Timeout value must be between 0 and 120 seconds."
-                          + " Timeout will not be set.")
+            warnings.warn(
+                "Timeout value must be between 0 and 120 seconds."
+                + " Timeout will not be set."
+            )
             return None
 
         # Return a bytearray because we need to support mutable sequence
         # operations like extend and insert.
         return bytearray(timeout.to_bytes())
 
-    def _assemble_move_to_entered(self,
-                                  pan: float | None = None,
-                                  tilt: float | None = None) -> bytearray:
+    def _assemble_move_to_entered(
+        self, pan: float | None = None, tilt: float | None = None
+    ) -> bytearray:
         """Assemble a packet to move to entered coordinates.
 
         This implements the "move to entered" command in the protocol
@@ -680,9 +688,9 @@ class QuicksetProtocol(ABC):
 
         return data_bytes
 
-    def _assemble_move_to_delta(self,
-                                pan: float | None = None,
-                                tilt: float | None = None) -> bytearray:
+    def _assemble_move_to_delta(
+        self, pan: float | None = None, tilt: float | None = None
+    ) -> bytearray:
         """Assemble a packet for the "move to delta" command.
 
         This implements the "move to delta" command in the protocol datasheets,
@@ -734,7 +742,7 @@ class PTCR20(QuicksetProtocol):
         identity:
             The identity address of the pan tilt mount. Defaults to 0, which
             is the broadcast address.
-    
+
     Attributes:
         identity:
             The pan tilt mount's identity address.
@@ -742,17 +750,20 @@ class PTCR20(QuicksetProtocol):
             Set of available commands.
     """
 
-    GenStatus = bitfield.make_bf(name='GenStatus', basetype=c_uint8,
-                                 fields=[
-                                     ('DWNM', c_bool, 1),
-                                     ('UPM', c_bool, 1),
-                                     ('CCWM', c_bool, 1),
-                                     ('CWM', c_bool, 1),
-                                     ('OSLR', c_bool, 1),
-                                     ('DES', c_bool, 1),
-                                     ('EXEC', c_bool, 1),
-                                     ('ENC', c_bool, 1),
-                                 ])
+    GenStatus = bitfield.make_bf(
+        name="GenStatus",
+        basetype=c_uint8,
+        fields=[
+            ("DWNM", c_bool, 1),
+            ("UPM", c_bool, 1),
+            ("CCWM", c_bool, 1),
+            ("CWM", c_bool, 1),
+            ("OSLR", c_bool, 1),
+            ("DES", c_bool, 1),
+            ("EXEC", c_bool, 1),
+            ("ENC", c_bool, 1),
+        ],
+    )
     GenStatus.__doc__ = """\
     General status bit set.
 
@@ -767,11 +778,20 @@ class PTCR20(QuicksetProtocol):
     - ENC: Pan-tilt mount is encoder-based and soft/hard limits are ignored.
     """
 
-    StatusResponse = namedtuple('StatusResponse',
-                                ('pan', 'tilt', 'pan_status', 'tilt_status', 
-                                 'gen_status', 'zoom','focus', 'n_cameras',
-                                 'camera_data')
-            )
+    StatusResponse = namedtuple(
+        "StatusResponse",
+        (
+            "pan",
+            "tilt",
+            "pan_status",
+            "tilt_status",
+            "gen_status",
+            "zoom",
+            "focus",
+            "n_cameras",
+            "camera_data",
+        ),
+    )
     StatusResponse.__doc__ = """\
     PTCR20 Status response tuple.    
 
@@ -801,7 +821,7 @@ class PTCR20(QuicksetProtocol):
 
     def _assemble_get_status(self):
         """Assemble a basic 'get status' packet.
-        
+
         The format of the get status packet, from MSB to LSB is:
         1. status bitset
         2. pan jog
@@ -815,7 +835,7 @@ class PTCR20(QuicksetProtocol):
         Returns:
             packet: The get status packet to send to the pan-tilt controller.
         """
-        cmd = GetStatusCmd();
+        cmd = GetStatusCmd()
 
         pan_jog = 0
         tilt_jog = 0
@@ -823,7 +843,6 @@ class PTCR20(QuicksetProtocol):
         focus_jog = 0
 
         return bytearray((cmd.base, pan_jog, tilt_jog, zoom_jog, focus_jog))
-
 
     def _parse_status(self, packet: bytearray):
         """Parse a status response from the pan-tilt mount.
@@ -847,7 +866,7 @@ class PTCR20(QuicksetProtocol):
                 n_cameras and camera_data will be None when the status response
                 is from a "move to" command instead of a "get status" command.
         """
-        
+
         pan = self.bytes_to_int(packet[0:2]) / self._ANGLE_MULTIPLIER
         tilt = self.bytes_to_int(packet[2:4]) / self._ANGLE_MULTIPLIER
 
@@ -888,8 +907,17 @@ class PTCR20(QuicksetProtocol):
             n_cameras = None
             camera_data = None
 
-        return self.StatusResponse(pan, tilt, pan_status, tilt_status, gen_status,
-                              zoom, focus, n_cameras, camera_data)
+        return self.StatusResponse(
+            pan,
+            tilt,
+            pan_status,
+            tilt_status,
+            gen_status,
+            zoom,
+            focus,
+            n_cameras,
+            camera_data,
+        )
 
 
 class PTHR90(QuicksetProtocol):
@@ -900,17 +928,20 @@ class PTHR90(QuicksetProtocol):
             Set of available commands.
     """
 
-    GenStatus = bitfield.make_bf(name='GenStatus', basetype=c_uint8,
-                                    fields=[
-                                        ('DWNM', c_bool, 1),
-                                        ('UPM', c_bool, 1),
-                                        ('CCWM', c_bool, 1),
-                                        ('CWM', c_bool, 1),
-                                        ('OSLR', c_bool, 1),
-                                        ('DES', c_bool, 1),
-                                        ('EXEC', c_bool, 1),
-                                        ('HRES', c_bool, 1),
-                                    ])
+    GenStatus = bitfield.make_bf(
+        name="GenStatus",
+        basetype=c_uint8,
+        fields=[
+            ("DWNM", c_bool, 1),
+            ("UPM", c_bool, 1),
+            ("CCWM", c_bool, 1),
+            ("CWM", c_bool, 1),
+            ("OSLR", c_bool, 1),
+            ("DES", c_bool, 1),
+            ("EXEC", c_bool, 1),
+            ("HRES", c_bool, 1),
+        ],
+    )
 
     def __init__(self):
         super().__init__()
@@ -922,13 +953,17 @@ class PTHR90(QuicksetProtocol):
     def _parse_status(self):
         pass
 
-GetStatusCmd = bitfield.make_bf(name='GetStatusCmd', basetype=c_uint8,
-                                fields=[
-                                    ('RES', c_bool, 1),
-                                    ('STOP', c_bool, 1),
-                                    ('OSL', c_bool, 1),
-                                    ('RU', c_bool, 1),
-                                ])
+
+GetStatusCmd = bitfield.make_bf(
+    name="GetStatusCmd",
+    basetype=c_uint8,
+    fields=[
+        ("RES", c_bool, 1),
+        ("STOP", c_bool, 1),
+        ("OSL", c_bool, 1),
+        ("RU", c_bool, 1),
+    ],
+)
 GetStatusCmd.__doc__ = """\
 Bit set for the "Get Status" command.
 
@@ -939,18 +974,21 @@ From LSB to MSB, the fields are:
 - RU: Return coordinates in resolver units instead of angles.
 """
 
-PanStatus = bitfield.make_bf(name='PanStatus', basetype=c_uint8,
-                                fields=[
-                                    ('PRF', c_bool, 1),
-                                    ('OL', c_bool, 1),
-                                    ('DE', c_bool, 1),
-                                    ('TO', c_bool, 1),
-                                    ('CCWHL', c_bool, 1),
-                                    ('CWHL', c_bool, 1),
-                                    ('CCWSL', c_bool, 1),
-                                    ('CWSL', c_bool, 1),
-                                ])
-PanStatus.__doc__= """\
+PanStatus = bitfield.make_bf(
+    name="PanStatus",
+    basetype=c_uint8,
+    fields=[
+        ("PRF", c_bool, 1),
+        ("OL", c_bool, 1),
+        ("DE", c_bool, 1),
+        ("TO", c_bool, 1),
+        ("CCWHL", c_bool, 1),
+        ("CWHL", c_bool, 1),
+        ("CCWSL", c_bool, 1),
+        ("CWSL", c_bool, 1),
+    ],
+)
+PanStatus.__doc__ = """\
 Pan status bit set.
 
 From LSB to MSB, the fields are:
@@ -964,18 +1002,21 @@ From LSB to MSB, the fields are:
 - CWSL: Clockwise soft limit reached.
 """
 
-TiltStatus = bitfield.make_bf(name='TiltStatus', basetype=c_uint8,
-                                fields=[
-                                    ('TRF', c_bool, 1),
-                                    ('OL', c_bool, 1),
-                                    ('DE', c_bool, 1),
-                                    ('TO', c_bool, 1),
-                                    ('DHL', c_bool, 1),
-                                    ('UHL', c_bool, 1),
-                                    ('DSL', c_bool, 1),
-                                    ('USL', c_bool, 1),
-                                ])
-TiltStatus.__doc__= """\
+TiltStatus = bitfield.make_bf(
+    name="TiltStatus",
+    basetype=c_uint8,
+    fields=[
+        ("TRF", c_bool, 1),
+        ("OL", c_bool, 1),
+        ("DE", c_bool, 1),
+        ("TO", c_bool, 1),
+        ("DHL", c_bool, 1),
+        ("UHL", c_bool, 1),
+        ("DSL", c_bool, 1),
+        ("USL", c_bool, 1),
+    ],
+)
+TiltStatus.__doc__ = """\
 Tilt status bit set.
 
 From LSB to MSB, the fields are:
