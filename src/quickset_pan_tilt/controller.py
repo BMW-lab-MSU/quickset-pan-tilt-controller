@@ -347,7 +347,7 @@ class QuicksetController(ABC):
                 # serial port read will timeout when the controller isn't
                 # responding, which results in the received packet being None.
                 print(".", end="", flush=True)
-                pass
+                # pass
             else:
                 # Print a newline once initialization is done because the
                 # dots after "waiting for controller to initialize" don't have
