@@ -943,15 +943,102 @@ class PTHR90(QuicksetProtocol):
         ],
     )
 
+    StatusResponse = namedtuple(
+        "StatusResponse",
+        (
+            "pan",
+            "tilt",
+            "pan_status",
+            "tilt_status",
+            "gen_status",
+        ),
+    )
+    StatusResponse.__doc__ = """\
+    PTHR90 Status response tuple.
+
+    Attributes:
+        pan: Pan coordinate.
+        tilt: Tilt coordinate.
+        pan_status: Pan status bitset from the PanStatus BitField.
+        tilt_status: Tilt status bitset from the TiltStatus BitField.
+        gen_status: General status bitset from the GenStatus BitField.
+    """
+
     def __init__(self):
         super().__init__()
 
     # TODO: implement and test these methods.
     def _assemble_get_status(self):
-        pass
+        """Assemble a basic 'get status' packet.
 
-    def _parse_status(self):
-        pass
+        The format of the get status packet, from MSB to LSB is:
+        1. status bitset
+        2. pan jog
+        3. tilt jog
+        4. aux 1
+        5. aux 2
+
+        Since this particular get status command is only intended to
+        get the status, all of the bytes are set to 0.
+
+        Returns:
+            packet: The get status packet to send to the pan-tilt controller.
+        """
+        cmd = GetStatusCmd()
+
+        pan_jog = 0
+        tilt_jog = 0
+        aux1 = 0
+        aux2 = 0
+
+        return bytearray((cmd.base, pan_jog, tilt_jog, aux1, aux2))
+
+    def _parse_status(self, packet: bytearray):
+        """Parse a status response from the pan-tilt mount.
+
+        Args:
+            packet: The status response to parse.
+
+        Returns:
+            status:
+                A StatusResponse namedtuple containing the following fields:
+                - pan: the pan coordinate
+                - tilt: the tilt coordinate
+                - pan_status: pan status bits
+                - tilt_status: tilt status bits
+                - gen_status: general status bits
+                - zoom: zoom coordinate
+                - focus: focus coordinate
+                - n_cameras: number of cameras
+                - camera_data: camera data; None if no cameras are attached
+
+                n_cameras and camera_data will be None when the status response
+                is from a "move to" command instead of a "get status" command.
+        """
+
+        pan = self.bytes_to_int(packet[0:2]) / self._ANGLE_MULTIPLIER
+        tilt = self.bytes_to_int(packet[2:4]) / self._ANGLE_MULTIPLIER
+
+        # In the following, we have to assign the status integer to the base
+        # property of the BitField object. This was not obvious from the
+        # bitfield documentation.
+        pan_status = PanStatus()
+        pan_status.base = packet[4]
+
+        tilt_status = TiltStatus()
+        tilt_status.base = packet[5]
+
+        gen_status = self.GenStatus()
+        gen_status.base = packet[6]
+
+
+        return self.StatusResponse(
+            pan,
+            tilt,
+            pan_status,
+            tilt_status,
+            gen_status,
+        )
 
 
 GetStatusCmd = bitfield.make_bf(
