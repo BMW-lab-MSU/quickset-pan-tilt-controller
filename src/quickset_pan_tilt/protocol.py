@@ -42,10 +42,6 @@ class QuicksetProtocol(ABC):
 
     CONTROL_CHARS = ControlCharacters(STX=0x02, ETX=0x03, ACK=0x06, NACK=0x15, ESC=0x1B)
 
-    # The pan/tilt angle resolution in 0.1 degrees, but the pan/tilt angles are
-    # specified as integers, so the actual angles are multiplied by 10.
-    _ANGLE_MULTIPLIER = 10
-
     @staticmethod
     def int_to_bytes(integer: int) -> bytearray:
         """Convert an integer into little-endian bytes.
@@ -246,6 +242,12 @@ class QuicksetProtocol(ABC):
                 "number": 0x96,
             },
         }
+
+        # By default, the pan/tilt angle resolution in 0.1 degrees, but the pan/tilt angles are
+        # specified as integers, so the actual angles are multiplied by 10. If a controller supports
+        # a different angle resolution, such as 0.01 degrees, like the PTHR90, then that subclass
+        # should set _ANGLE_MULTIPLIER accordingly.
+        self._ANGLE_MULTIPLIER = 10
 
         self.COMMAND_NAMES = set(self._COMMANDS.keys())
 
@@ -644,9 +646,7 @@ class QuicksetProtocol(ABC):
         # operations like extend and insert.
         return bytearray(timeout.to_bytes())
 
-    def _assemble_move_to_entered(
-        self, pan: float | None = None, tilt: float | None = None
-    ) -> bytearray:
+    def _assemble_move_to_entered(self, pan: float , tilt: float) -> bytearray:
         """Assemble a packet to move to entered coordinates.
 
         This implements the "move to entered" command in the protocol
@@ -654,14 +654,10 @@ class QuicksetProtocol(ABC):
 
         Args:
             pan:
-                Pan coordinate in degrees, between -360.0 and 360.0.
-                Coordinate precision is 0.1 degrees. Passing 999.9 or None will
-                keep the pan position stationary.
+                Pan coordinate in degrees, between -360 and 360.
 
             tilt:
-                Tilt coordinate in degrees, between -180.0 and 180.0.
-                Coordinate precision is 0.1 degrees. Passing 999.9 or None will
-                keep the tilt coordinate stationary.
+                Tilt coordinate in degrees, between -180 and 180.
 
         Returns:
             data_bytes:
@@ -670,13 +666,8 @@ class QuicksetProtocol(ABC):
                 coordinate, and the last two bytes are little-endian
                 representation of the tilt coordinate.
         """
-        if pan is None:
-            pan = 999.9
-        if tilt is None:
-            tilt = 999.9
-
         # Pan and tilt coordinates need to be sent as integers, so we have to
-        # multiply by 10 to get the coordinates in the right range.
+        # multiply to get the coordinates in the right range.
         pan = int(pan * self._ANGLE_MULTIPLIER)
         tilt = int(tilt * self._ANGLE_MULTIPLIER)
 
@@ -688,9 +679,7 @@ class QuicksetProtocol(ABC):
 
         return data_bytes
 
-    def _assemble_move_to_delta(
-        self, pan: float | None = None, tilt: float | None = None
-    ) -> bytearray:
+    def _assemble_move_to_delta(self, pan: float, tilt: float) -> bytearray:
         """Assemble a packet for the "move to delta" command.
 
         This implements the "move to delta" command in the protocol datasheets,
@@ -699,14 +688,10 @@ class QuicksetProtocol(ABC):
 
         Args:
             pan:
-                Pan coordinate in degrees, between -360.0 and 360.0.
-                Coordinate precision is 0.1 degrees. Passing 0 or None will
-                keep the pan position stationary.
+                Pan coordinate in degrees, between -360 and 360.
 
             tilt:
-                Tilt coordinate in degrees, between -180.0 and 180.0.
-                Coordinate precision is 0.1 degrees. Passing 0 or None will
-                keep the tilt coordinate stationary.
+                Tilt coordinate in degrees, between -180 and 180.
 
         Returns:
             data_bytes:
@@ -715,16 +700,10 @@ class QuicksetProtocol(ABC):
                 coordinate, and the last two bytes are little-endian
                 representation of the tilt coordinate.
         """
-
-        if pan is None:
-            pan = 0
-        if tilt is None:
-            tilt = 0
-
         # Pan and tilt coordinates need to be sent as integers, so we have to
-        # multiply by 10 to get the coordinates in the right range.
-        pan = int(pan * 10)
-        tilt = int(tilt * 10)
+        # multiply to get the coordinates in the right range.
+        pan = int(pan * self._ANGLE_MULTIPLIER)
+        tilt = int(tilt * self._ANGLE_MULTIPLIER)
 
         pan_bytes = self.int_to_bytes(pan)
         tilt_bytes = self.int_to_bytes(tilt)
@@ -967,7 +946,9 @@ class PTHR90(QuicksetProtocol):
     def __init__(self):
         super().__init__()
 
-    # TODO: implement and test these methods.
+        # The PTHR-90 has a resolution of 0.01 degrees.
+        self._ANGLE_MULTIPLIER = 100
+
     def _assemble_get_status(self):
         """Assemble a basic 'get status' packet.
 
