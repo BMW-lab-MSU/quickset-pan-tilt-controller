@@ -54,6 +54,9 @@ class QuicksetController(ABC):
         self._pan_destination = None
         self._tilt_destination = None
 
+        # The controller takes a while to respond after being powered on.
+        self._wait_for_initialization()
+
     @property
     def pan(self):
         return self._pan
@@ -401,12 +404,9 @@ class ControllerSerial(QuicksetController):
         timeout: int = 1,
         baud: int = 9600,
     ):
-        super().__init__(protocol)
-
         self._serial = serial.Serial(port=port, timeout=timeout, baudrate=baud)
 
-        # The controller takes a while to respond after being powered on.
-        self._wait_for_initialization()
+        super().__init__(protocol)
 
     def _send(self, packet: bytearray):
         self._serial.write(packet)
