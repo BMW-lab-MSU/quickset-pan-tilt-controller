@@ -6,7 +6,7 @@ class PTC_Controller:
     def __init__(self, name: str = "Pan Tilt Controller Object", Identity: str = bytes.fromhex('00')) -> None :
         self.name: str = name
         self.identity: str = Identity
-        com_port = 'COM8' # change to your COM port number
+        com_port = 'COM5' # change to your COM port number
         self.serial = serial.Serial(com_port, baudrate=9600, timeout=1)  
         self.STX = bytes.fromhex('02') #start of text character
         self.ETX = bytes.fromhex('03') #end of text character
@@ -54,9 +54,20 @@ class PTC_Controller:
         self.serial.write(bytes.fromhex(FluffPan[0:2]))   # Send Sub-Command
         self.serial.write(bytes.fromhex(FluffTilt[2:]))   # Send Sub-Command
         self.serial.write(bytes.fromhex(FluffTilt[0:2]))   # Send Sub-Command
-        self.serial.write(bytes.fromhex('33'))  # Send End Command
+        self.serial.write(bytes.fromhex('57'))  # Send End Command
         self.serial.write(self.ETX)             # Send End Character
     
+    def move_to_abs_0(self):
+        self.serial.write(self.STX)             # Send Start
+        self.serial.write(self.identity)        # Send ID
+        self.serial.write(bytes.fromhex('33'))  # Send Command
+        self.serial.write(bytes.fromhex('00'))   # Send Sub-Command
+        self.serial.write(bytes.fromhex('00'))   # Send Sub-Command
+        self.serial.write(bytes.fromhex('00'))   # Send Sub-Command
+        self.serial.write(bytes.fromhex('00'))   # Send Sub-Command
+        self.serial.write(bytes.fromhex('33'))  # Send End Command
+        self.serial.write(self.ETX)             # Send End Character
+        
     def send_data(self, command, data):
 
         self.serial.write(self.STX)      # Send Start
