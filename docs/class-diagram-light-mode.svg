@@ -8,7 +8,7 @@
    width="975.5"
    zoomAndPan="magnify"
    id="svg77"
-   sodipodi:docname="class-diagram.svg"
+   sodipodi:docname="class-diagram-light-mode.svg"
    inkscape:version="1.4 (e7c3feb100, 2024-10-09)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
@@ -23,15 +23,15 @@
      inkscape:pageopacity="0"
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
-     inkscape:zoom="0.80358923"
-     inkscape:cx="376.4361"
-     inkscape:cy="347.19231"
-     inkscape:window-width="1880"
-     inkscape:window-height="1015"
-     inkscape:window-x="20"
-     inkscape:window-y="510"
-     inkscape:window-maximized="1"
-     inkscape:current-layer="g77" />
+     inkscape:zoom="1.6071785"
+     inkscape:cx="154.30769"
+     inkscape:cy="452.65664"
+     inkscape:window-width="1920"
+     inkscape:window-height="1588"
+     inkscape:window-x="1509"
+     inkscape:window-y="542"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="elem_QuicksetController" />
   <defs
      id="defs1" />
   <g
@@ -100,6 +100,16 @@
        width="200.6774"
        x="45.66"
        y="90.601997" />
+    <text
+       fill="#000000"
+       font-family="sans-serif"
+       font-size="14px"
+       lengthAdjust="spacing"
+       textLength="108.0376"
+       x="65.660004"
+       y="302.1113"
+       id="text13"
+       transform="translate(-1.12,0.27609155)">move_absolute()</text>
     <circle
        cx="84.879799"
        cy="106.602"
@@ -247,7 +257,8 @@
        textLength="46.507801"
        x="65.660004"
        y="263.9754"
-       id="text11">home()</text>
+       id="text11"
+       transform="translate(-1.12)">home()</text>
     <circle
        cx="56.66"
        cy="279.11139"
@@ -255,15 +266,6 @@
        style="stroke:#038048;stroke-width:1"
        id="ellipse11"
        r="3" />
-    <text
-       fill="#000000"
-       font-family="sans-serif"
-       font-size="14px"
-       lengthAdjust="spacing"
-       textLength="130.4095"
-       x="65.660004"
-       y="283.0433"
-       id="text12">move_delta(pan,tilt)</text>
     <circle
        cx="56.66"
        cy="298.17929"
@@ -271,15 +273,6 @@
        style="stroke:#038048;stroke-width:1"
        id="ellipse12"
        r="3" />
-    <text
-       fill="#000000"
-       font-family="sans-serif"
-       font-size="14px"
-       lengthAdjust="spacing"
-       textLength="154.2374"
-       x="65.660004"
-       y="302.1113"
-       id="text13">move_absolute(pan,tilt)</text>
     <circle
        cx="56.66"
        cy="317.24719"
@@ -295,7 +288,8 @@
        textLength="77.937698"
        x="65.660004"
        y="321.1792"
-       id="text14">fault_reset()</text>
+       id="text14"
+       transform="translate(-0.14)">fault_reset()</text>
     <circle
        cx="56.66"
        cy="336.31509"
@@ -311,7 +305,8 @@
        textLength="76.201698"
        x="65.660004"
        y="340.2471"
-       id="text15">get_status()</text>
+       id="text15"
+       transform="translate(-0.7)">get_status()</text>
     <circle
        cx="56.66"
        cy="355.383"
@@ -319,15 +314,6 @@
        style="stroke:#038048;stroke-width:1"
        id="ellipse15"
        r="3" />
-    <text
-       fill="#000000"
-       font-family="sans-serif"
-       font-size="14px"
-       lengthAdjust="spacing"
-       textLength="154.0834"
-       x="65.660004"
-       y="359.315"
-       id="text16">check_for_faults(status)</text>
     <rect
        fill="#f24d5c"
        height="6"
@@ -363,7 +349,28 @@
        textLength="51.1418"
        x="65.660004"
        y="397.45081"
-       id="text18">receive()</text>
+       id="text18"
+       transform="translate(-0.322)">receive()</text>
+    <text
+       fill="#000000"
+       font-family="sans-serif"
+       font-size="14px"
+       lengthAdjust="spacing"
+       textLength="114.0575"
+       x="65.660004"
+       y="359.315"
+       id="text16"
+       transform="translate(-0.7,-0.138)">check_for_faults()</text>
+    <text
+       fill="#000000"
+       font-family="sans-serif"
+       font-size="14px"
+       lengthAdjust="spacing"
+       textLength="84.209702"
+       x="65.660004"
+       y="283.0433"
+       id="text12"
+       transform="translate(-1.12,0.13809155)">move_delta()</text>
   </g>
   <g
      id="elem_ControllerSerial"
