@@ -2,3 +2,5 @@ sphinx_rtd_theme
 sphinx-autoapi
 myst-parser
 sphinxcontrib-plantuml
+sphinx-book-theme
+pydata-sphinx-theme
