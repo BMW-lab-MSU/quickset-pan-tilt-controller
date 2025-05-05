@@ -14,11 +14,11 @@ author = 'Trevor Vannoy, Wyatt Weller, John Fike'
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.autosummary',
-    'sphinx.ext.apidoc',
+    'autoapi.extension',
     'sphinx.ext.napoleon'
 ]
+
+autoapi_dirs = ['../src/quickset_pan_tilt']
 
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
