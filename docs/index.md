@@ -1,0 +1,6 @@
+# Test
+
+```{toctree}
+architecture.md
+```
+
