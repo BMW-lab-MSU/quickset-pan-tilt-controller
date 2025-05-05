@@ -15,7 +15,8 @@ author = 'Trevor Vannoy, Wyatt Weller, John Fike'
 
 extensions = [
     'autoapi.extension',
-    'sphinx.ext.napoleon'
+    'sphinx.ext.napoleon',
+    'myst_parser'
 ]
 
 autoapi_dirs = ['../src/quickset_pan_tilt']
