@@ -2,5 +2,126 @@
 
 Note that most private methods are not shown. Only private abstract methods and their concrete implementations are shown.
 
-```{uml} class-diagram.puml
+```{uml} 
+@startuml quickset_pan_tilt
+!pragma useIntermediatePackages false
+
+hide empty methods
+
+abstract class quickset_pan_tilt.controller.QuicksetController {
+  -protocol: QuicksetProtocol
+  +pan
+  +tilt
+  +pan_destination
+  +tilt_destination
+  +communication_timeout
+
+  +home()
+  +move_delta()
+  +move_absolute()
+  +fault_reset()
+  +get_status()
+  +check_for_faults()
+  ' -execute_move_command()
+  ' -set_pan_tilt_coordinate_properties()
+  ' -wait_for_initizliation()
+  -{abstract} send()
+  -{abstract} receive()
+}
+
+class quickset_pan_tilt.controller.ControllerSerial {
+  -serial
+  -send()
+  -receive()
+}
+
+class quickset_pan_tilt.protocol.ControlCharacters {
+  +STX
+  +ETX
+  +ACK
+  +NACK
+  +ESC
+}
+abstract class quickset_pan_tilt.protocol.QuicksetProtocol {
+  -COMMANDS
+  -ANGLE_MULTIPLIER
+  +COMMAND_NAMES
+  +{static} CONTROL_CHARS: ControlCharacters
+
+  +assemble_packet()
+  +parse_packet()
+  +check_for_hard_faults()
+  +check_for_soft_faults()
+  -{abstract} assemble_get_status()
+  -{abstract} parse_status()
+  ' -{static} int_to_bytes()
+  ' -{static} bytes_to_int()
+  ' -{static} compute_lrc()
+  ' -{static} escape_control_chars()
+  ' -{static} insert_escape_sequence()
+  ' -{static} remove_escape_sequence()
+  ' -assemble_cmd_data_lrc()
+  ' -add_identity_byte()
+  ' -remove_identity_byte()
+  ' -assemble_fault_reset()
+  ' -assemble_get_communication_timeout()
+  ' -assemble_set_communication_timeout()
+  ' -parse_communication_timeout()
+  ' -assemble_move_to_entered()
+  ' -assemble_move_to_delta()
+
+}
+
+class quickset_pan_tilt.protocol.PTCR20 {
+  +identity
+  +{static}StatusResponse
+  +{static}GenStatus
+  -assemble_get_status()
+  -parse_status()
+  ' -add_identity_byte()
+  ' -remove_identity_byte()
+}
+class quickset_pan_tilt.protocol.PTHR90 {
+  -ANGLE_MULTIPLIER
+  +{static}StatusResponse
+  +{static}GenStatus
+  -assemble_get_status()
+  -parse_status()
+}
+
+struct quickset_pan_tilt.protocol.GenStatusCmd {
+  +RES
+  +STOP
+  +OSL
+  +RU
+}
+
+struct quickset_pan_tilt.protocol.PanStatus {
+  +PRF
+  +OL
+  +DE
+  +TO
+  +CCWHL
+  +CWHL
+  +CCWSL
+  +CWSL
+}
+
+struct quickset_pan_tilt.protocol.TiltStatus {
+  +TRF
+  +OL
+  +DE
+  +TO
+  +DHL
+  +UHL
+  +DSL
+  +USL
+}
+
+
+quickset_pan_tilt.controller.QuicksetController <|-- quickset_pan_tilt.controller.ControllerSerial
+quickset_pan_tilt.controller.QuicksetController *-- quickset_pan_tilt.protocol.QuicksetProtocol
+quickset_pan_tilt.protocol.QuicksetProtocol <|-- quickset_pan_tilt.protocol.PTCR20
+quickset_pan_tilt.protocol.QuicksetProtocol <|-- quickset_pan_tilt.protocol.PTHR90
+@enduml
 ```
