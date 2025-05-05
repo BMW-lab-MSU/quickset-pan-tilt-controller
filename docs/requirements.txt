@@ -1,3 +1,4 @@
 sphinx_rtd_theme
 sphinx-autoapi
 myst-parser
+sphinxcontrib-plantuml
